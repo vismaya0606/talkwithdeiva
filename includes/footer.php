@@ -16,7 +16,7 @@ $footer_social = array_filter([
       <?php foreach ($footer_social as $icon => $url): ?>
         <a class="text-white" href="<?= e($url) ?>" target="_blank" rel="noopener" aria-label="<?= e($icon) ?>"><i class="bi bi-<?= e($icon) ?>"></i></a>
       <?php endforeach; ?>
-      <?php if ($wa): ?><a class="text-white" href="https://wa.me/<?= e($wa) ?>" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a><?php endif; ?>
+      <?php if ($wa): ?><a class="text-white" href="https://wa.me/<?= e(wa_number($wa)) ?>" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a><?php endif; ?>
       <?php if ($mail): ?><a class="text-white" href="mailto:<?= e($mail) ?>" aria-label="Email"><i class="bi bi-envelope-fill"></i></a><?php endif; ?>
     </div>
     <p class="mb-2 small">

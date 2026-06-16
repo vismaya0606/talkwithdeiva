@@ -26,7 +26,7 @@ include __DIR__ . '/includes/header.php';
         <?php if (setting('contact_whatsapp')): ?>
         <li class="list-group-item d-flex">
           <strong class="me-3" style="min-width:140px"><i class="bi bi-whatsapp me-2"></i>WhatsApp</strong>
-          <span><a href="https://wa.me/<?= e(setting('contact_whatsapp')) ?>" class="text-decoration-none">+<?= e(setting('contact_whatsapp')) ?></a></span>
+          <span><a href="https://wa.me/<?= e(wa_number(setting('contact_whatsapp'))) ?>" class="text-decoration-none">+<?= e(wa_number(setting('contact_whatsapp'))) ?></a></span>
         </li>
         <?php endif; ?>
         <li class="list-group-item d-flex">
