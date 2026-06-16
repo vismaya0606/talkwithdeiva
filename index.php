@@ -33,6 +33,18 @@ include __DIR__ . '/includes/header.php';
           <a href="register.php#register-form" class="btn btn-light btn-lg px-4 fw-semibold">Register Now</a>
           <a href="contact.php" class="btn btn-outline-light btn-lg px-4">Contact Me</a>
         </div>
+        <?php $hero_vid = youtube_id(setting('hero_video')); ?>
+        <?php if ($hero_vid): ?>
+          <div class="hero-video mt-4 mx-auto mx-lg-0 <?= is_youtube_short(setting('hero_video')) ? 'hero-video-short' : '' ?>">
+            <iframe
+              src="https://www.youtube.com/embed/<?= e($hero_vid) ?>?rel=0&amp;modestbranding=1&amp;playsinline=1&amp;autoplay=1&amp;mute=1&amp;loop=1&amp;playlist=<?= e($hero_vid) ?>"
+              title="Featured video" loading="lazy"
+              frameborder="0"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              referrerpolicy="strict-origin-when-cross-origin"
+              allowfullscreen></iframe>
+          </div>
+        <?php endif; ?>
       </div>
       <div class="col-lg-5 text-center">
         <img src="<?= e(img_src($hero_img, 'https://picsum.photos/seed/profile/500/500')) ?>"

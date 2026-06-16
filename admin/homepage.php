@@ -4,7 +4,7 @@ require_admin();
 $tid = admin_tenant_id();
 
 $fields = [
-  'hero_title','hero_subtitle','hero_tagline','about_title','about_content',
+  'hero_title','hero_subtitle','hero_tagline','hero_video','about_title','about_content',
   'achievements','contact_phone','contact_whatsapp','contact_email','contact_address',
 ];
 
@@ -37,6 +37,16 @@ include __DIR__ . '/inc/header.php';
         <input class="form-control" name="hero_subtitle" value="<?= e(setting('hero_subtitle','',$tid)) ?>"></div>
       <div class="col-md-6"><label class="form-label">Tagline</label>
         <input class="form-control" name="hero_tagline" value="<?= e(setting('hero_tagline','',$tid)) ?>"></div>
+      <div class="col-12">
+        <label class="form-label">YouTube Video (Shorts or normal link — shown below the buttons)</label>
+        <input class="form-control" name="hero_video" placeholder="https://www.youtube.com/shorts/xxxxxxxxxxx"
+               value="<?= e(setting('hero_video','',$tid)) ?>">
+        <small class="text-muted">Paste any YouTube link. Leave blank to hide the video. Change it anytime for seasonal/ad videos.</small>
+        <?php if ($vid = youtube_id(setting('hero_video','',$tid))): ?>
+          <div class="mt-2"><span class="badge bg-success">Video detected</span>
+            <a href="https://www.youtube.com/watch?v=<?= e($vid) ?>" target="_blank" class="small ms-1">preview</a></div>
+        <?php endif; ?>
+      </div>
       <div class="col-md-6"><label class="form-label">Hero / Profile Image</label>
         <input type="file" class="form-control" name="hero_image" accept="image/*">
         <?php if (setting('hero_image','',$tid)): ?>

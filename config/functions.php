@@ -298,6 +298,33 @@ function img_src(string $path, string $fallback = ''): string
     return asset($path);
 }
 
+/**
+ * Extracts the 11-character YouTube video ID from any common URL form
+ * (watch?v=, youtu.be/, shorts/, embed/, live/) or a raw ID. Returns null
+ * if nothing valid is found.
+ */
+function youtube_id(string $url): ?string
+{
+    $url = trim($url);
+    if ($url === '') {
+        return null;
+    }
+    if (preg_match('~(?:youtube\.com/(?:watch\?v=|embed/|shorts/|live/|v/)|youtu\.be/)([A-Za-z0-9_-]{11})~i', $url, $m)) {
+        return $m[1];
+    }
+    if (preg_match('~^[A-Za-z0-9_-]{11}$~', $url)) {
+        return $url; // already a bare video ID
+    }
+    return null;
+}
+
+/** True when the given YouTube URL is a vertical Short. */
+function is_youtube_short(string $url): bool
+{
+    return stripos($url, 'shorts') !== false;
+}
+
+
 function flash(string $key, ?string $msg = null): ?string
 {
     start_session();
