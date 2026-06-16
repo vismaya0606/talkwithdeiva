@@ -56,12 +56,8 @@ $ogimg = setting('og_image') ?: setting('hero_image');
 
 <nav class="navbar navbar-expand-lg navbar-dark fixed-top brand-nav">
   <div class="container">
-    <a class="navbar-brand d-flex align-items-center gap-2" href="<?= e(base_url()) ?>index.php">
-      <?php if ($logo): ?>
-        <img src="<?= e(img_src($logo)) ?>" alt="<?= e($site_name) ?>" height="36">
-      <?php else: ?>
-        <span class="fw-bold"><?= e($site_name) ?></span>
-      <?php endif; ?>
+    <a class="navbar-brand fw-bold fs-5" href="<?= e(base_url()) ?>index.php">
+      <?= e($site_name) ?>
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav"
             aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation">
