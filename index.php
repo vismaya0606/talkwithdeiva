@@ -22,16 +22,25 @@ include __DIR__ . '/includes/header.php';
 ?>
 
 <!-- ===================== HERO ===================== -->
-<header class="hero-section text-white" id="home">
+<header class="hero-section" id="home">
   <div class="container">
     <div class="row align-items-center g-5 py-5">
-      <div class="col-lg-7 text-center text-lg-start">
-        <h1 class="display-4 fw-bold mb-3"><?= e(setting('hero_title', 'Welcome')) ?></h1>
-        <p class="lead mb-1"><?= e(setting('hero_subtitle')) ?></p>
-        <p class="mb-4 opacity-75"><?= e(setting('hero_tagline')) ?></p>
-        <div class="d-flex flex-wrap gap-2 justify-content-center justify-content-lg-start">
-          <a href="register.php#register-form" class="btn btn-light btn-lg px-4 fw-semibold">Register Now</a>
-          <a href="contact.php" class="btn btn-outline-light btn-lg px-4">Contact Me</a>
+      <div class="col-lg-5 text-center order-1 order-lg-0">
+        <div class="hero-photo-wrap">
+          <img src="<?= e(img_src($hero_img, 'https://picsum.photos/seed/profile/500/600')) ?>"
+               alt="<?= e(setting('site_name')) ?>" class="hero-photo">
+        </div>
+      </div>
+      <div class="col-lg-7 text-center text-lg-start order-0 order-lg-1">
+        <span class="hero-eyebrow"><?= e(setting('hero_eyebrow', 'Hello, I am')) ?></span>
+        <h1 class="hero-name"><?= e(setting('hero_title', 'Welcome')) ?></h1>
+        <?php if (setting('hero_subtitle')): ?>
+          <p class="hero-role"><?= e(setting('hero_subtitle')) ?></p>
+        <?php endif; ?>
+        <p class="hero-desc"><?= nl2br(e(setting('hero_tagline'))) ?></p>
+        <div class="hero-actions d-flex flex-wrap gap-3 justify-content-center justify-content-lg-start">
+          <a href="register.php#register-form" class="btn btn-brand btn-lg px-4">Register Now</a>
+          <a href="contact.php" class="btn btn-brand-outline btn-lg px-4">Contact Us</a>
         </div>
         <?php $hero_vid = youtube_id(setting('hero_video')); ?>
         <?php if ($hero_vid): ?>
@@ -45,10 +54,6 @@ include __DIR__ . '/includes/header.php';
               allowfullscreen></iframe>
           </div>
         <?php endif; ?>
-      </div>
-      <div class="col-lg-5 text-center">
-        <img src="<?= e(img_src($hero_img, 'https://picsum.photos/seed/profile/500/500')) ?>"
-             alt="<?= e(setting('site_name')) ?>" class="img-fluid hero-photo">
       </div>
     </div>
   </div>

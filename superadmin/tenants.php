@@ -7,10 +7,11 @@ function seed_tenant_settings(int $tid, string $siteName): void
 {
     $defaults = [
         'site_name'        => $siteName,
-        'primary_color'    => '#0d6efd',
-        'secondary_color'  => '#6610f2',
+        'primary_color'    => '#E8112D',
+        'secondary_color'  => '#F2867D',
         'footer_text'      => '© ' . date('Y') . ' ' . $siteName . '. All rights reserved.',
-        'hero_title'       => 'Welcome to ' . $siteName,
+        'hero_eyebrow'     => 'Hello, I am',
+        'hero_title'       => $siteName,
         'hero_subtitle'    => 'Your designation here',
         'hero_tagline'     => 'Your inspiring tagline goes here.',
         'about_title'      => 'About Me',
