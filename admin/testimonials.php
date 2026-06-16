@@ -96,7 +96,7 @@ include __DIR__ . '/inc/header.php';
             <tr>
               <td><img src="../<?= e($r['photo'] ?: '') ?>" onerror="this.style.display='none'" height="40" class="rounded-circle"></td>
               <td><?= e($r['name']) ?><br><small class="text-muted"><?= e($r['designation']) ?></small></td>
-              <td class="small"><?= e(mb_strimwidth($r['testimonial'],0,70,'…')) ?></td>
+              <td class="small"><?= e(str_excerpt($r['testimonial'], 70)) ?></td>
               <td><?= (int)$r['display_order'] ?></td>
               <td class="text-end">
                 <a href="?edit=<?= (int)$r['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>

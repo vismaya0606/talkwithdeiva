@@ -330,6 +330,19 @@ function is_youtube_short(string $url): bool
     return stripos($url, 'shorts') !== false;
 }
 
+/**
+ * Safe text excerpt that works with or without the mbstring extension
+ * (and is multibyte-aware when it is available).
+ */
+function str_excerpt(string $text, int $len = 70): string
+{
+    $text = trim($text);
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($text) > $len ? mb_substr($text, 0, $len) . '…' : $text;
+    }
+    return strlen($text) > $len ? substr($text, 0, $len) . '…' : $text;
+}
+
 
 function flash(string $key, ?string $msg = null): ?string
 {
