@@ -19,6 +19,11 @@ $footer_social = array_filter([
       <?php if ($wa): ?><a class="text-white" href="https://wa.me/<?= e($wa) ?>" aria-label="WhatsApp"><i class="bi bi-whatsapp"></i></a><?php endif; ?>
       <?php if ($mail): ?><a class="text-white" href="mailto:<?= e($mail) ?>" aria-label="Email"><i class="bi bi-envelope-fill"></i></a><?php endif; ?>
     </div>
+    <p class="mb-2 small">
+      <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>contact-details.php">Contact Details</a>
+      <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>terms.php">Terms &amp; Conditions</a>
+      <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>refund.php">Refund &amp; Cancellation</a>
+    </p>
     <p class="mb-0 small"><?= e(setting('footer_text', '© ' . date('Y'))) ?></p>
   </div>
 </footer>
