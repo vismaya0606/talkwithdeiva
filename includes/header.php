@@ -8,6 +8,9 @@ require_once __DIR__ . '/../config/functions.php';
 $site_name = setting('site_name', 'My Website');
 $primary   = setting('primary_color', '#E8112D');
 $secondary = setting('secondary_color', '#F2867D');
+// Migrate the old default blue/purple accent to the new red/coral theme.
+if (strtolower($primary) === '#0d6efd')   { $primary = '#E8112D'; }
+if (strtolower($secondary) === '#6610f2') { $secondary = '#F2867D'; }
 $logo      = setting('logo');
 $favicon   = setting('favicon');
 

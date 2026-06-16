@@ -275,7 +275,13 @@ function upload_image(array $file, string $subdir): ?string
  * ------------------------------------------------------------------ */
 function asset(string $path): string
 {
-    return base_url() . ltrim($path, '/');
+    $rel  = ltrim($path, '/');
+    $file = dirname(__DIR__) . '/' . $rel;
+    $url  = base_url() . $rel;
+    if (is_file($file)) {
+        $url .= '?v=' . filemtime($file);   // cache-busting so deploys load fresh CSS/JS/images
+    }
+    return $url;
 }
 
 /** Absolute base URL of the site, e.g. https://example.com/ */
