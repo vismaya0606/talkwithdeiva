@@ -4,7 +4,7 @@ require_admin();
 $tid = admin_tenant_id();
 
 $fields = [
-  'hero_title','hero_subtitle','hero_tagline','hero_video','about_title','about_content',
+  'hero_eyebrow','hero_title','hero_subtitle','hero_tagline','hero_video','about_title','about_content',
   'achievements','contact_phone','contact_whatsapp','contact_email','contact_address',
 ];
 
@@ -31,7 +31,9 @@ include __DIR__ . '/inc/header.php';
     <?= csrf_field() ?>
     <h5 class="mb-3">Hero Banner</h5>
     <div class="row g-3 mb-4">
-      <div class="col-md-6"><label class="form-label">Hero Title</label>
+      <div class="col-md-6"><label class="form-label">Eyebrow Text (small line above name)</label>
+        <input class="form-control" name="hero_eyebrow" placeholder="Hello, I am" value="<?= e(setting('hero_eyebrow','',$tid)) ?>"></div>
+      <div class="col-md-6"><label class="form-label">Hero Title (Name)</label>
         <input class="form-control" name="hero_title" value="<?= e(setting('hero_title','',$tid)) ?>"></div>
       <div class="col-md-6"><label class="form-label">Hero Subtitle / Designation</label>
         <input class="form-control" name="hero_subtitle" value="<?= e(setting('hero_subtitle','',$tid)) ?>"></div>

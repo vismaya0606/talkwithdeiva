@@ -6,7 +6,9 @@ $tid = admin_tenant_id();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
     foreach (['site_name','primary_color','secondary_color','footer_text',
-              'meta_title','meta_description','meta_keywords'] as $f) {
+              'meta_title','meta_description','meta_keywords',
+              'social_facebook','social_instagram','social_youtube',
+              'social_twitter','social_linkedin'] as $f) {
         save_setting($f, trim($_POST[$f] ?? ''), $tid);
     }
     foreach (['logo' => 'logos', 'favicon' => 'logos', 'og_image' => 'logos'] as $field => $dir) {
@@ -49,6 +51,20 @@ include __DIR__ . '/inc/header.php';
         <input type="file" class="form-control" name="favicon" accept="image/*,.ico">
         <?php if (setting('favicon','',$tid)): ?><img src="../<?= e(setting('favicon','',$tid)) ?>" height="32" class="mt-2"><?php endif; ?>
       </div>
+    </div>
+
+    <h5 class="mb-3">Social Media Links (shown on the left rail &amp; footer)</h5>
+    <div class="row g-3 mb-4">
+      <div class="col-md-6"><label class="form-label"><i class="bi bi-facebook me-1"></i>Facebook URL</label>
+        <input class="form-control" name="social_facebook" value="<?= e(setting('social_facebook','',$tid)) ?>"></div>
+      <div class="col-md-6"><label class="form-label"><i class="bi bi-instagram me-1"></i>Instagram URL</label>
+        <input class="form-control" name="social_instagram" value="<?= e(setting('social_instagram','',$tid)) ?>"></div>
+      <div class="col-md-6"><label class="form-label"><i class="bi bi-youtube me-1"></i>YouTube URL</label>
+        <input class="form-control" name="social_youtube" value="<?= e(setting('social_youtube','',$tid)) ?>"></div>
+      <div class="col-md-6"><label class="form-label"><i class="bi bi-twitter-x me-1"></i>Twitter / X URL</label>
+        <input class="form-control" name="social_twitter" value="<?= e(setting('social_twitter','',$tid)) ?>"></div>
+      <div class="col-md-6"><label class="form-label"><i class="bi bi-linkedin me-1"></i>LinkedIn URL</label>
+        <input class="form-control" name="social_linkedin" value="<?= e(setting('social_linkedin','',$tid)) ?>"></div>
     </div>
 
     <h5 class="mb-3">SEO</h5>
