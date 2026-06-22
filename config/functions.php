@@ -343,6 +343,15 @@ function str_excerpt(string $text, int $len = 70): string
     return strlen($text) > $len ? substr($text, 0, $len) . '…' : $text;
 }
 
+/**
+ * Normalises a phone number for wa.me / WhatsApp links: digits only,
+ * no "+", spaces or dashes. e.g. "+91 97908 06993" -> "919790806993".
+ */
+function wa_number(string $raw): string
+{
+    return preg_replace('/\D+/', '', $raw);
+}
+
 
 function flash(string $key, ?string $msg = null): ?string
 {

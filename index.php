@@ -189,7 +189,7 @@ include __DIR__ . '/includes/header.php';
     </div>
     <div class="text-center mt-4 d-flex justify-content-center gap-2 flex-wrap">
       <?php if (setting('contact_whatsapp')): ?>
-        <a href="https://wa.me/<?= e(setting('contact_whatsapp')) ?>" class="btn btn-success btn-lg">
+        <a href="https://wa.me/<?= e(wa_number(setting('contact_whatsapp'))) ?>" class="btn btn-success btn-lg">
           <i class="bi bi-whatsapp"></i> WhatsApp</a>
       <?php endif; ?>
       <a href="mailto:<?= e(setting('contact_email')) ?>" class="btn btn-primary btn-lg brand-btn">
