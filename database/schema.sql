@@ -118,14 +118,18 @@ CREATE TABLE IF NOT EXISTS `gallery` (
 CREATE TABLE IF NOT EXISTS `registrations` (
   `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
   `tenant_id`         INT UNSIGNED NOT NULL,
-  `full_name`         VARCHAR(150) NOT NULL,
-  `mobile`            VARCHAR(20) NOT NULL,
+  `full_name`         VARCHAR(150) NOT NULL,   -- Parent Name
+  `mobile`            VARCHAR(20) NOT NULL,    -- WhatsApp Number
   `email`             VARCHAR(190) NULL,
+  `child_name`        VARCHAR(150) NULL,
+  `grade`             VARCHAR(60) NULL,
+  `syllabus`          VARCHAR(60) NULL,
   `city`              VARCHAR(120) NULL,
+  `heard_about`       VARCHAR(60) NULL,
   `state`             VARCHAR(120) NULL,
   `profession`        VARCHAR(150) NULL,
   `interested_service` VARCHAR(190) NULL,
-  `message`           TEXT NULL,
+  `message`           TEXT NULL,               -- Primary question / expectation
   `created_at`        TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_reg_tenant` (`tenant_id`),
