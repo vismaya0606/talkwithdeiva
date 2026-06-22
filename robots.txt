@@ -1,8 +1,1 @@
-User-agent: *
-Allow: /
-Disallow: /admin/
-Disallow: /superadmin/
-Disallow: /config/
-Disallow: /includes/
 
-Sitemap: /sitemap.xml
