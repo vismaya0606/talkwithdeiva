@@ -11,18 +11,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id    = (int)($_POST['id'] ?? 0);
         $title = trim($_POST['title'] ?? '');
         $desc  = trim($_POST['description'] ?? '');
+        $price = trim($_POST['price'] ?? '');
+        $price = ($price !== '' && is_numeric($price) && (float)$price > 0)
+            ? number_format((float)$price, 2, '.', '') : null;
         $icon  = trim($_POST['icon'] ?? 'bi-star');
         $order = (int)($_POST['display_order'] ?? 0);
 
         if ($title === '') {
             flash('admin_err', 'Title is required.');
         } elseif ($id > 0) {
-            $stmt = db()->prepare('UPDATE services SET title=?,description=?,icon=?,display_order=? WHERE id=? AND tenant_id=?');
-            $stmt->execute([$title,$desc,$icon,$order,$id,$tid]);
+            $stmt = db()->prepare('UPDATE services SET title=?,description=?,price=?,icon=?,display_order=? WHERE id=? AND tenant_id=?');
+            $stmt->execute([$title,$desc,$price,$icon,$order,$id,$tid]);
             flash('admin_ok', 'Service updated.');
         } else {
-            $stmt = db()->prepare('INSERT INTO services (tenant_id,title,description,icon,display_order) VALUES (?,?,?,?,?)');
-            $stmt->execute([$tid,$title,$desc,$icon,$order]);
+            $stmt = db()->prepare('INSERT INTO services (tenant_id,title,description,price,icon,display_order) VALUES (?,?,?,?,?,?)');
+            $stmt->execute([$tid,$title,$desc,$price,$icon,$order]);
             flash('admin_ok', 'Service added.');
         }
     } elseif ($action === 'delete') {
@@ -61,6 +64,10 @@ include __DIR__ . '/inc/header.php';
             <input class="form-control" name="title" required value="<?= e($edit['title'] ?? '') ?>"></div>
           <div class="mb-3"><label class="form-label">Description</label>
             <textarea class="form-control" name="description" rows="3"><?= e($edit['description'] ?? '') ?></textarea></div>
+          <div class="mb-3"><label class="form-label">Price (&#8377;)</label>
+            <input type="number" step="0.01" min="0" class="form-control" name="price"
+                   value="<?= e($edit['price'] ?? '') ?>" placeholder="Leave empty for enquiry-only">
+            <div class="form-text">Services with a price show a &ldquo;Book Now&rdquo; button and online checkout.</div></div>
           <div class="mb-3"><label class="form-label">Icon
               (<a href="https://icons.getbootstrap.com/" target="_blank">Bootstrap Icon</a> class)</label>
             <input class="form-control" name="icon" value="<?= e($edit['icon'] ?? 'bi-star') ?>" placeholder="bi-star"></div>
@@ -77,13 +84,14 @@ include __DIR__ . '/inc/header.php';
     <div class="card shadow-sm">
       <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
-          <thead class="table-light"><tr><th>#</th><th>Icon</th><th>Title</th><th>Order</th><th class="text-end">Actions</th></tr></thead>
+          <thead class="table-light"><tr><th>#</th><th>Icon</th><th>Title</th><th>Price</th><th>Order</th><th class="text-end">Actions</th></tr></thead>
           <tbody>
           <?php foreach ($rows as $r): ?>
             <tr>
               <td><?= (int)$r['id'] ?></td>
               <td><i class="bi <?= e($r['icon']) ?> fs-5"></i></td>
               <td><?= e($r['title']) ?></td>
+              <td><?= ((float)($r['price'] ?? 0) > 0) ? e(format_price($r['price'])) : '<span class="text-muted">—</span>' ?></td>
               <td><?= (int)$r['display_order'] ?></td>
               <td class="text-end">
                 <a href="?edit=<?= (int)$r['id'] ?>" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
@@ -96,7 +104,7 @@ include __DIR__ . '/inc/header.php';
               </td>
             </tr>
           <?php endforeach; ?>
-          <?php if (!$rows): ?><tr><td colspan="5" class="text-center text-muted py-4">No services yet.</td></tr><?php endif; ?>
+          <?php if (!$rows): ?><tr><td colspan="6" class="text-center text-muted py-4">No services yet.</td></tr><?php endif; ?>
           </tbody>
         </table>
       </div>

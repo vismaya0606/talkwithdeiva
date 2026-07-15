@@ -28,6 +28,7 @@ $tid = admin_tenant_id();
         <a href="gallery.php"       class="<?= $active==='gallery'?'active':'' ?>"><i class="bi bi-images me-2"></i>Gallery</a>
         <a href="testimonials.php"  class="<?= $active==='testimonials'?'active':'' ?>"><i class="bi bi-chat-quote me-2"></i>Testimonials</a>
         <a href="registrations.php" class="<?= $active==='registrations'?'active':'' ?>"><i class="bi bi-people me-2"></i>Registrations</a>
+        <a href="payments.php"      class="<?= $active==='payments'?'active':'' ?>"><i class="bi bi-credit-card me-2"></i>Payments</a>
         <a href="settings.php"      class="<?= $active==='settings'?'active':'' ?>"><i class="bi bi-palette me-2"></i>Theme &amp; Settings</a>
         <?php if ($admin['role'] === 'superadmin'): ?>
           <a href="../superadmin/tenants.php"><i class="bi bi-building me-2"></i>Super Admin</a>

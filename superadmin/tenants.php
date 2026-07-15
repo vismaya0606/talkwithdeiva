@@ -24,6 +24,9 @@ function seed_tenant_settings(int $tid, string $siteName): void
         'meta_title'       => $siteName,
         'meta_description' => 'Official website of ' . $siteName,
         'meta_keywords'    => '',
+        'instamojo_api_key'    => '',
+        'instamojo_auth_token' => '',
+        'instamojo_mode'       => 'test',
     ];
     foreach ($defaults as $k => $v) {
         save_setting($k, $v, $tid);
