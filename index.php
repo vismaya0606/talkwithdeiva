@@ -90,16 +90,27 @@ include __DIR__ . '/includes/header.php';
 <section class="py-5 bg-light" id="services">
   <div class="container">
     <div class="text-center mb-5">
-      <h2 class="section-title">Services</h2>
-      <p class="text-muted">What I can help you with</p>
+      <h2 class="section-title">Services &amp; Pricing</h2>
+      <p class="text-muted">What I can help you with — book and pay securely online</p>
     </div>
     <div class="row g-4">
       <?php foreach ($services as $s): ?>
         <div class="col-md-6 col-lg-3">
-          <div class="service-card text-center h-100 p-4">
+          <div class="service-card text-center h-100 p-4 d-flex flex-column">
             <div class="service-icon mb-3"><i class="bi <?= e($s['icon']) ?>"></i></div>
             <h5 class="fw-bold"><?= e($s['title']) ?></h5>
-            <p class="text-muted small mb-0"><?= e($s['description']) ?></p>
+            <p class="text-muted small"><?= e($s['description']) ?></p>
+            <?php if ((float)($s['price'] ?? 0) > 0): ?>
+              <div class="mt-auto">
+                <div class="fs-5 fw-bold brand-text mb-2"><?= e(format_price($s['price'])) ?></div>
+                <a href="<?= e(base_url()) ?>checkout.php?service=<?= (int)$s['id'] ?>"
+                   class="btn btn-brand btn-sm px-4">Book Now</a>
+              </div>
+            <?php else: ?>
+              <div class="mt-auto">
+                <a href="<?= e(base_url()) ?>contact.php" class="btn btn-brand-outline btn-sm px-4">Enquire</a>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
       <?php endforeach; ?>

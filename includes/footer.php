@@ -22,6 +22,7 @@ $footer_social = array_filter([
     <p class="mb-2 small">
       <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>contact-details.php">Contact Details</a>
       <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>terms.php">Terms &amp; Conditions</a>
+      <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>privacy.php">Privacy Policy</a>
       <a class="text-white-50 text-decoration-none mx-2" href="<?= e(base_url()) ?>refund.php">Refund &amp; Cancellation</a>
     </p>
     <p class="mb-0 small"><?= e(setting('footer_text', '© ' . date('Y'))) ?></p>

@@ -17,13 +17,16 @@ panel manages all tenants.
 **Public site**
 - Hero banner (profile image, name, designation, tagline, CTA buttons)
 - About section with achievements
-- Services cards (admin-editable)
+- Services cards with **pricing and "Book Now" buttons** (admin-editable)
+- **Online checkout** (`checkout.php`) with secure payment via
+  **Instamojo**, server-side payment verification (`payment-status.php`)
 - Image gallery (admin-editable)
 - Testimonials slider (admin-editable)
 - Contact section with WhatsApp + Email buttons
 - Registration form (Name, Mobile, Email, City, State, Profession,
   Interested Service, Message)
 - **Sticky "Register Now"** button on every page that scrolls to the form
+- Legal pages: Terms & Conditions, **Privacy Policy**, Refund & Cancellation
 - Dynamic SEO meta, Open Graph tags, `sitemap.xml`, `robots.txt`
 
 **Admin dashboard** (`/admin/`)
@@ -31,8 +34,10 @@ panel manages all tenants.
 - Dashboard stats (total + today's registrations, services, testimonials, gallery)
 - Theme management (primary/secondary colour, logo, favicon, site name, footer)
 - Homepage management (hero, about, contact)
-- Services CRUD · Gallery CRUD · Testimonials CRUD
+- Services CRUD (incl. price) · Gallery CRUD · Testimonials CRUD
 - Registrations: view, search, filter by date, **export to CSV (Excel)**
+- Payments: view all online checkout attempts and their gateway status
+- Payment gateway settings (Instamojo API key / auth token, test or live mode)
 
 **Super Admin** (`/superadmin/`)
 - Create / activate / deactivate / delete tenants
@@ -55,6 +60,11 @@ public_html/
 ├── about.php
 ├── contact.php
 ├── register.php         # Registration form + handler
+├── checkout.php         # Online checkout (Instamojo)
+├── payment-status.php   # Payment verification + thank-you page
+├── privacy.php          # Privacy Policy
+├── terms.php            # Terms & Conditions
+├── refund.php           # Refund & Cancellation Policy
 ├── sitemap.php          # served as /sitemap.xml
 ├── robots.txt
 ├── .htaccess
@@ -68,6 +78,7 @@ public_html/
 │   ├── gallery.php
 │   ├── testimonials.php
 │   ├── registrations.php
+│   ├── payments.php
 │   ├── settings.php
 │   └── inc/ (header.php, footer.php)
 │
@@ -86,8 +97,32 @@ public_html/
 │   └── functions.php
 │
 └── database/
-    └── schema.sql
+    ├── schema.sql
+    └── migrations/      # incremental SQL for existing installs
 ```
+
+---
+
+## 💳 Online Payments (Instamojo)
+
+1. **Existing installs:** run
+   `database/migrations/2026_07_15_service_pricing_and_payments.sql`
+   (fresh installs get everything from `schema.sql`).
+2. In Instamojo go to **Settings → API & Plugins** and copy your
+   **Private API Key** and **Private Auth Token**.
+3. In the admin panel open **Theme & Settings → Payment Gateway
+   (Instamojo)**, paste both values and choose the mode:
+   - **Test** — uses `test.instamojo.com` (create a free test account
+     there and use *its* credentials while trying things out).
+   - **Live** — uses `www.instamojo.com` for real payments.
+4. Give each purchasable service a **Price** under **Admin → Services**.
+   Priced services show a **Book Now** button that leads to
+   `checkout.php`; the buyer enters name/email/phone and is redirected to
+   Instamojo's secure payment page. On return, the payment is verified
+   server-side and recorded — see **Admin → Payments**.
+
+Services without a price show an **Enquire** button instead, so the
+checkout is entirely opt-in per service.
 
 ---
 

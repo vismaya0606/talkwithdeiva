@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS `services` (
   `tenant_id`     INT UNSIGNED NOT NULL,
   `title`         VARCHAR(150) NOT NULL,
   `description`   TEXT NULL,
+  `price`         DECIMAL(10,2) NULL,
   `icon`          VARCHAR(80) NOT NULL DEFAULT 'bi-star',
   `display_order` INT NOT NULL DEFAULT 0,
   `created_at`    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -109,6 +110,30 @@ CREATE TABLE IF NOT EXISTS `gallery` (
   PRIMARY KEY (`id`),
   KEY `idx_gallery_tenant` (`tenant_id`),
   CONSTRAINT `fk_gallery_tenant` FOREIGN KEY (`tenant_id`)
+    REFERENCES `tenants` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+--  payments  (online checkout attempts + gateway result)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS `payments` (
+  `id`                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `tenant_id`          INT UNSIGNED NOT NULL,
+  `service_id`         INT UNSIGNED NULL,
+  `service_title`      VARCHAR(150) NOT NULL,
+  `buyer_name`         VARCHAR(150) NOT NULL,
+  `email`              VARCHAR(190) NOT NULL,
+  `phone`              VARCHAR(20)  NOT NULL,
+  `amount`             DECIMAL(10,2) NOT NULL,
+  `payment_request_id` VARCHAR(64)  NULL,
+  `payment_id`         VARCHAR(64)  NULL,
+  `status`             ENUM('created','success','failed') NOT NULL DEFAULT 'created',
+  `created_at`         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at`         TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_payment_tenant` (`tenant_id`),
+  KEY `idx_payment_request` (`payment_request_id`),
+  CONSTRAINT `fk_payment_tenant` FOREIGN KEY (`tenant_id`)
     REFERENCES `tenants` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -184,13 +209,16 @@ INSERT INTO `settings` (`tenant_id`,`setting_key`,`setting_value`) VALUES
   (1,'meta_title','Your Name | Entrepreneur & Mentor'),
   (1,'meta_description','Official website of Your Name — entrepreneur, mentor and public speaker. Explore services, gallery and register today.'),
   (1,'meta_keywords','mentor, entrepreneur, public speaker, coaching'),
-  (1,'og_image','');
+  (1,'og_image',''),
+  (1,'instamojo_api_key',''),
+  (1,'instamojo_auth_token',''),
+  (1,'instamojo_mode','test');
 
-INSERT INTO `services` (`tenant_id`,`title`,`description`,`icon`,`display_order`) VALUES
-  (1,'Mentorship','One-on-one mentorship to help you reach your personal and professional goals.','bi-people-fill',1),
-  (1,'Public Speaking','Inspiring keynote sessions for events, colleges and corporates.','bi-mic-fill',2),
-  (1,'Business Consulting','Strategic guidance to grow and scale your business.','bi-graph-up-arrow',3),
-  (1,'Workshops','Hands-on workshops on leadership, productivity and growth.','bi-easel-fill',4);
+INSERT INTO `services` (`tenant_id`,`title`,`description`,`price`,`icon`,`display_order`) VALUES
+  (1,'Mentorship','One-on-one mentorship to help you reach your personal and professional goals.',999.00,'bi-people-fill',1),
+  (1,'Public Speaking','Inspiring keynote sessions for events, colleges and corporates.',NULL,'bi-mic-fill',2),
+  (1,'Business Consulting','Strategic guidance to grow and scale your business.',1499.00,'bi-graph-up-arrow',3),
+  (1,'Workshops','Hands-on workshops on leadership, productivity and growth.',499.00,'bi-easel-fill',4);
 
 INSERT INTO `testimonials` (`tenant_id`,`name`,`designation`,`testimonial`,`display_order`) VALUES
   (1,'Ramesh Kumar','Business Owner','The mentorship completely changed how I run my company. Highly recommended!',1),

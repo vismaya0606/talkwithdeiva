@@ -8,9 +8,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (['site_name','primary_color','secondary_color','footer_text',
               'meta_title','meta_description','meta_keywords',
               'social_facebook','social_instagram','social_youtube',
-              'social_twitter','social_linkedin'] as $f) {
+              'social_twitter','social_linkedin',
+              'instamojo_api_key','instamojo_auth_token'] as $f) {
         save_setting($f, trim($_POST[$f] ?? ''), $tid);
     }
+    $mode = ($_POST['instamojo_mode'] ?? 'test') === 'live' ? 'live' : 'test';
+    save_setting('instamojo_mode', $mode, $tid);
     foreach (['logo' => 'logos', 'favicon' => 'logos', 'og_image' => 'logos'] as $field => $dir) {
         if (!empty($_FILES[$field]['name'])) {
             if ($p = upload_image($_FILES[$field], $dir)) {
@@ -65,6 +68,27 @@ include __DIR__ . '/inc/header.php';
         <input class="form-control" name="social_twitter" value="<?= e(setting('social_twitter','',$tid)) ?>"></div>
       <div class="col-md-6"><label class="form-label"><i class="bi bi-linkedin me-1"></i>LinkedIn URL</label>
         <input class="form-control" name="social_linkedin" value="<?= e(setting('social_linkedin','',$tid)) ?>"></div>
+    </div>
+
+    <h5 class="mb-3">Payment Gateway (Instamojo)</h5>
+    <div class="row g-3 mb-4">
+      <div class="col-md-5"><label class="form-label">API Key</label>
+        <input class="form-control" name="instamojo_api_key" autocomplete="off"
+               value="<?= e(setting('instamojo_api_key','',$tid)) ?>"></div>
+      <div class="col-md-5"><label class="form-label">Auth Token</label>
+        <input type="password" class="form-control" name="instamojo_auth_token" autocomplete="off"
+               value="<?= e(setting('instamojo_auth_token','',$tid)) ?>"></div>
+      <div class="col-md-2"><label class="form-label">Mode</label>
+        <select class="form-select" name="instamojo_mode">
+          <option value="test" <?= setting('instamojo_mode','test',$tid) !== 'live' ? 'selected' : '' ?>>Test</option>
+          <option value="live" <?= setting('instamojo_mode','test',$tid) === 'live' ? 'selected' : '' ?>>Live</option>
+        </select></div>
+      <div class="col-12 form-text">
+        Find these under Instamojo &rarr; Settings &rarr; API &amp; Plugins. The online checkout
+        (&ldquo;Book Now&rdquo; buttons) only works once both fields are filled. Use Test mode with
+        <a href="https://test.instamojo.com" target="_blank" rel="noopener">test.instamojo.com</a>
+        credentials while trying things out.
+      </div>
     </div>
 
     <h5 class="mb-3">SEO</h5>
