@@ -64,6 +64,8 @@ bgcolor(inShortTrade ? color.new(color.red,   70) : na)
 BRIGHT_RED   = color.rgb(255, 0, 0)
 BRIGHT_GREEN = color.rgb(0, 200, 0)
 
+newDay = timeframe.change("D")
+
 // ════════════════════════════════════════════════════════════════════════════════
 // SPIDY SIGNAL ENGINE (from 07_Spidy_V1)
 // ════════════════════════════════════════════════════════════════════════════════
@@ -224,8 +226,6 @@ var array<line>  buyTargetLines  = array.new<line>()
 var array<line>  sellTargetLines = array.new<line>()
 var array<label> buyTargetLabels  = array.new<label>()
 var array<label> sellTargetLabels = array.new<label>()
-
-newDay = timeframe.change("D")
 
 if newDay or barstate.isfirst
     for l in buyTargetLines
