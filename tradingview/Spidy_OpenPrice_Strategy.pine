@@ -16,9 +16,6 @@ minTargetDist = input.float(20.0, title="Min Target Distance from Signal High/Lo
 minStopDist   = input.float(20.0, title="Min Stop Distance from Signal High/Low",   step=0.5, minval=0.0)
 buffer        = input.float(0.0,  title="Signal Level Buffer",                      step=0.25, minval=0.0)
 
-// Signal confirmation
-requireClearCross = input.bool(true, title="G Signal Needs Full Candle Across Blue Line (No Touch)")
-
 // RSI filter
 rsiLength   = input.int(14,   title="RSI Length",              minval=1)
 rsiBuyMax   = input.float(69, title="Max RSI allowed for G-Buy",  step=0.5)
@@ -64,6 +61,7 @@ bgcolor(inShortTrade ? color.new(color.red,   70) : na)
 BRIGHT_RED   = color.rgb(255, 0, 0)
 BRIGHT_GREEN = color.rgb(0, 200, 0)
 
+// Needed early so both the signal engine and OpenPrice sections can use it
 newDay = timeframe.change("D")
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -140,16 +138,15 @@ if raw_smgc
     smgc_fired := smgc_fired + 1
 
 // ── Cyan EMA clear-cross confirmation ────────────────────────────────────────
-// Raw G conditions fire the moment close crosses the cyan EMA (ema_base), but
-// the candle's wick can still be touching the line. With requireClearCross
-// enabled a raw signal only ARMS a pending state; the confirmed G-Buy / G-Sell
-// prints on the first candle whose entire range is on the correct side of the
-// CYAN EMA line (ema_base) with zero touching:
-//   G-Buy : low  > ema_base  — whole candle, wick included, above the cyan line
-//   G-Sell: high < ema_base  — whole candle, wick included, below the cyan line
-// If the pending direction flips before a clear-cross candle arrives, the
-// pending signal is discarded. The confirming candle becomes the G signal
-// candle, so its high/low are used for the breakout trigger and stop levels.
+// The raw G conditions above fire the moment `close` crosses the cyan EMA, but
+// the candle's wick can still be touching the line. We ARM a pending state on
+// that raw signal and only CONFIRM it on the first candle whose entire range —
+// wick tip included — is fully on the correct side of the cyan EMA:
+//   G-Buy  confirmed: low  > ema_base  (nothing touching or below the cyan line)
+//   G-Sell confirmed: high < ema_base  (nothing touching or above the cyan line)
+// Same-bar confirmation works too: if the raw signal fires on a candle that is
+// already fully clear of the line, is_gbuy / is_gsell fire on that same bar.
+// Pending state resets on a supertrend flip or on a new day.
 
 raw_gbuy  = gbuy_normal  or gbuy_gap  or gbuy_first  or raw_bmgc
 raw_gsell = gsell_normal or gsell_gap or gsell_first
@@ -157,29 +154,26 @@ raw_gsell = gsell_normal or gsell_gap or gsell_first
 var bool gbuy_pending  = false
 var bool gsell_pending = false
 
-// Reset pending on flip or new day
 if st1_flipped_bear or newDay
     gbuy_pending  := false
 if st1_flipped_bull or newDay
     gsell_pending := false
 
-// Arm pending when raw signal fires; persists until a clear-cross candle arrives
 if raw_gbuy
     gbuy_pending := true
 if raw_gsell
     gsell_pending := true
 
-// Whole candle (wick included) is fully across the CYAN EMA line — zero touching allowed.
-// G-Buy  : low  > ema_base  → no part of the candle (not even the bottom wick) is touching or below the cyan line.
-// G-Sell : high < ema_base  → no part of the candle (not even the top wick) is touching or above the cyan line.
-candle_clear_above = low  > ema_base
-candle_clear_below = high < ema_base
+// Full-candle check against the cyan EMA line
+candle_above_ema = low  > ema_base   // whole candle above cyan line, wick not touching
+candle_below_ema = high < ema_base   // whole candle below cyan line, wick not touching
 
-// Include raw_gbuy/raw_gsell directly so same-bar confirmation works:
-// Pine evaluates the expression BEFORE the `if raw_gbuy: gbuy_pending := true` block
-// runs, so gbuy_pending is stale by one bar. Adding raw_gbuy here closes that gap.
-is_gbuy  = requireClearCross ? ((raw_gbuy or gbuy_pending) and both_bull and candle_clear_above) : raw_gbuy
-is_gsell = requireClearCross ? ((raw_gsell or gsell_pending) and both_bear and candle_clear_below) : raw_gsell
+// (raw_gbuy or gbuy_pending) lets the same bar that fires raw_gbuy also
+// self-confirm if it is already fully clear — Pine evaluates this expression
+// before the `if raw_gbuy: gbuy_pending := true` block runs, so we need the
+// raw flag directly in the expression to avoid a one-bar delay.
+is_gbuy  = (raw_gbuy  or gbuy_pending)  and both_bull and candle_above_ema
+is_gsell = (raw_gsell or gsell_pending) and both_bear and candle_below_ema
 
 if is_gbuy
     gbuy_pending := false
@@ -292,10 +286,10 @@ for lb in sellTargetLabels
 // qualifying breakout occurs. Such later breakouts are marked with an X instead.
 //
 // FAKE SIGNAL INVALIDATION: if the breakout for the locked dayDir is vetoed by
-// RSI (X mark), signal_high/low are cleared so a fresh G signal in the SAME
-// direction must fire before another entry attempt is possible. dayDir is NOT
-// reset — once declared a G-Buy day (1) or G-Sell day (-1) it stays that way
-// for the rest of the day. The opposite direction can never take over mid-day.
+// RSI (X mark), that G-Buy/G-Sell is treated as a fake signal for the day.
+// dayDir resets to 0 (waiting) and the next qualifying G-Buy/G-Sell — in
+// either direction — becomes the new candidate for the day's dayDir. See the
+// "Fake signal invalidation" block further down for the actual reset logic.
 
 var int   dayDir      = 0     // 0 = waiting, 1 = G-Buy day, -1 = G-Sell day
 var float signal_high = na
@@ -408,17 +402,18 @@ long_blocked_by_rsi  = long_price_trigger  and rsi_blocks_long
 short_blocked_by_rsi = short_price_trigger and rsi_blocks_short
 
 // ── Fake signal invalidation ──────────────────────────────────────────────────
-// If the day's locked breakout is vetoed by RSI, that breakout attempt was
-// a fake. The signal levels are cleared so the same-direction G signal must
-// re-confirm before another breakout attempt is possible. dayDir is NOT reset:
-// once the day is declared a G-Buy day (1) or G-Sell day (-1), that direction
-// is locked for the rest of the day — the opposite direction can never take over,
-// even after a fake invalidation.
+// If the day's locked breakout is vetoed by RSI, treat the G-Buy/G-Sell that
+// set dayDir as a FAKE signal. Reset dayDir (and the signal high/low) so the
+// day goes back to "waiting" — the next qualifying G-Buy/G-Sell, in EITHER
+// direction, becomes the new candidate for the day's dayDir. Since signal_high/low are
+// cleared, this same fake signal can never re-trigger a breakout attempt.
 if long_blocked_by_rsi
+    dayDir      := 0
     signal_high := na
     signal_low  := na
 
 if short_blocked_by_rsi
+    dayDir      := 0
     signal_high := na
     signal_low  := na
 
@@ -482,21 +477,13 @@ plot(dayDir == 1 ? longTarget : dayDir == -1 ? shortTarget : na,
 plot(dayDir == 1 ? longStop : dayDir == -1 ? shortStop : na,
      "Selected Stop", color=color.yellow, linewidth=2, style=plot.style_linebr)
 
-// Only show G-Sell label when the day is not already locked as a G-Buy day,
-// and only show G-Buy label when the day is not already locked as a G-Sell day.
-plotshape(is_gsell and isSignalTime and dayDir != 1,
+plotshape(is_gsell and isSignalTime,
      "GSell", shape.labeldown, location.abovebar,
      color.new(color.maroon, 0), text="G-Sell", textcolor=color.white, size=size.normal)
 
-plotshape(is_gbuy and isSignalTime and dayDir != -1,
+plotshape(is_gbuy and isSignalTime,
      "GBuy", shape.labelup, location.belowbar,
      color.new(color.lime, 0), text="G-Buy", textcolor=color.black, size=size.normal)
-
-// Raw (unconfirmed) signals waiting for a candle fully across the blue line
-plotshape(requireClearCross and raw_gbuy and not is_gbuy and isSignalTime,
-     "GBuy Armed", shape.circle, location.belowbar, color.new(color.lime, 40), size=size.tiny)
-plotshape(requireClearCross and raw_gsell and not is_gsell and isSignalTime,
-     "GSell Armed", shape.circle, location.abovebar, color.new(color.maroon, 40), size=size.tiny)
 
 plotshape(long_entry_cond,  "LongEntry",  shape.triangleup,   location.belowbar, color.new(color.blue, 0), size=size.small)
 plotshape(short_entry_cond, "ShortEntry", shape.triangledown, location.abovebar, color.new(color.red,  0), size=size.small)
