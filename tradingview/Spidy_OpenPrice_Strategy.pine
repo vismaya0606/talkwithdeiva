@@ -290,10 +290,10 @@ for lb in sellTargetLabels
 // qualifying breakout occurs. Such later breakouts are marked with an X instead.
 //
 // FAKE SIGNAL INVALIDATION: if the breakout for the locked dayDir is vetoed by
-// RSI (X mark), that G-Buy/G-Sell is treated as a fake signal for the day.
-// dayDir resets to 0 (waiting) and the next qualifying G-Buy/G-Sell — in
-// either direction — becomes the new candidate for the day's dayDir. See the
-// "Fake signal invalidation" block further down for the actual reset logic.
+// RSI (X mark), signal_high/low are cleared so a fresh G signal in the SAME
+// direction must fire before another entry attempt is possible. dayDir is NOT
+// reset — once declared a G-Buy day (1) or G-Sell day (-1) it stays that way
+// for the rest of the day. The opposite direction can never take over mid-day.
 
 var int   dayDir      = 0     // 0 = waiting, 1 = G-Buy day, -1 = G-Sell day
 var float signal_high = na
@@ -406,18 +406,17 @@ long_blocked_by_rsi  = long_price_trigger  and rsi_blocks_long
 short_blocked_by_rsi = short_price_trigger and rsi_blocks_short
 
 // ── Fake signal invalidation ──────────────────────────────────────────────────
-// If the day's locked breakout is vetoed by RSI, treat the G-Buy/G-Sell that
-// set dayDir as a FAKE signal. Reset dayDir (and the signal high/low) so the
-// day goes back to "waiting" — the next qualifying G-Buy/G-Sell, in EITHER
-// direction, becomes the new candidate for the day. Since signal_high/low are
-// cleared, this same fake signal can never re-trigger a breakout attempt.
+// If the day's locked breakout is vetoed by RSI, that breakout attempt was
+// a fake. The signal levels are cleared so the same-direction G signal must
+// re-confirm before another breakout attempt is possible. dayDir is NOT reset:
+// once the day is declared a G-Buy day (1) or G-Sell day (-1), that direction
+// is locked for the rest of the day — the opposite direction can never take over,
+// even after a fake invalidation.
 if long_blocked_by_rsi
-    dayDir      := 0
     signal_high := na
     signal_low  := na
 
 if short_blocked_by_rsi
-    dayDir      := 0
     signal_high := na
     signal_low  := na
 
@@ -481,11 +480,13 @@ plot(dayDir == 1 ? longTarget : dayDir == -1 ? shortTarget : na,
 plot(dayDir == 1 ? longStop : dayDir == -1 ? shortStop : na,
      "Selected Stop", color=color.yellow, linewidth=2, style=plot.style_linebr)
 
-plotshape(is_gsell and isSignalTime,
+// Only show G-Sell label when the day is not already locked as a G-Buy day,
+// and only show G-Buy label when the day is not already locked as a G-Sell day.
+plotshape(is_gsell and isSignalTime and dayDir != 1,
      "GSell", shape.labeldown, location.abovebar,
      color.new(color.maroon, 0), text="G-Sell", textcolor=color.white, size=size.normal)
 
-plotshape(is_gbuy and isSignalTime,
+plotshape(is_gbuy and isSignalTime and dayDir != -1,
      "GBuy", shape.labelup, location.belowbar,
      color.new(color.lime, 0), text="G-Buy", textcolor=color.black, size=size.normal)
 
