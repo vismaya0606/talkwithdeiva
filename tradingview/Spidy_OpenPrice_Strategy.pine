@@ -139,17 +139,17 @@ if raw_bmgc
 if raw_smgc
     smgc_fired := smgc_fired + 1
 
-// ── Blue-line clear-cross confirmation ────────────────────────────────────────
-// The raw G conditions above can fire on a candle that merely TOUCHES the blue
-// ST1 line with its wick. With requireClearCross enabled, a raw signal only
-// ARMS a pending state; the confirmed G-Buy / G-Sell prints on the first candle
-// that is COMPLETELY across the blue line:
-//   G-Buy : the whole candle, wick included, is above st1_line (low > st1_line)
-//   G-Sell: the whole candle, wick included, is below st1_line (high < st1_line)
-// A candle whose wick still touches the blue line does NOT confirm. If ST1
-// flips back before any candle fully clears the line, the pending signal is
-// discarded. The confirming candle becomes the G signal candle, so its
-// high/low are used for the breakout trigger and stop levels below.
+// ── Cyan EMA clear-cross confirmation ────────────────────────────────────────
+// Raw G conditions fire the moment close crosses the cyan EMA (ema_base), but
+// the candle's wick can still be touching the line. With requireClearCross
+// enabled a raw signal only ARMS a pending state; the confirmed G-Buy / G-Sell
+// prints on the first candle whose entire range is on the correct side of the
+// CYAN EMA line (ema_base) with zero touching:
+//   G-Buy : low  > ema_base  — whole candle, wick included, above the cyan line
+//   G-Sell: high < ema_base  — whole candle, wick included, below the cyan line
+// If the pending direction flips before a clear-cross candle arrives, the
+// pending signal is discarded. The confirming candle becomes the G signal
+// candle, so its high/low are used for the breakout trigger and stop levels.
 
 raw_gbuy  = gbuy_normal  or gbuy_gap  or gbuy_first  or raw_bmgc
 raw_gsell = gsell_normal or gsell_gap or gsell_first
@@ -169,9 +169,11 @@ if raw_gbuy
 if raw_gsell
     gsell_pending := true
 
-// Whole candle (wick included) is fully across the blue ST1 line — zero touching allowed
-candle_clear_above = low  > st1_line
-candle_clear_below = high < st1_line
+// Whole candle (wick included) is fully across the CYAN EMA line — zero touching allowed.
+// G-Buy  : low  > ema_base  → no part of the candle (not even the bottom wick) is touching or below the cyan line.
+// G-Sell : high < ema_base  → no part of the candle (not even the top wick) is touching or above the cyan line.
+candle_clear_above = low  > ema_base
+candle_clear_below = high < ema_base
 
 // Include raw_gbuy/raw_gsell directly so same-bar confirmation works:
 // Pine evaluates the expression BEFORE the `if raw_gbuy: gbuy_pending := true` block
