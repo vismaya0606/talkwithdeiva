@@ -1,0 +1,516 @@
+//@version=6
+strategy(title="Spidy OpenPrice Strategy", shorttitle="Spidy-OP-V1", overlay=true, max_bars_back=1000, max_lines_count=500, max_labels_count=100, default_qty_value=1, commission_value=0, commission_type=strategy.commission.percent, slippage=0, currency=currency.INR)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// INPUT SETTINGS
+// ════════════════════════════════════════════════════════════════════════════════
+
+// OpenPrice level inputs (from 08_OpenPrice_Indicator)
+step       = input.float(39.0, title="Step Value",                     step=0.5, minval=0.1)
+offset     = input.float(18.0, title="Buy/Sell Offset",                step=0.5, minval=0.1)
+manualOpen = input.float(0.0,  title="Override Open Price (0 = auto)", step=0.5, minval=0.0)
+nTargets   = input.int(6,      title="Number of Targets",              minval=1, maxval=10)
+
+// Trade management
+minTargetDist = input.float(20.0, title="Min Target Distance from Signal High/Low", step=0.5, minval=0.0)
+minStopDist   = input.float(20.0, title="Min Stop Distance from Signal High/Low",   step=0.5, minval=0.0)
+buffer        = input.float(0.0,  title="Signal Level Buffer",                      step=0.25, minval=0.0)
+
+// Signal confirmation
+requireClearCross = input.bool(true, title="G Signal Needs Full Candle Across Blue Line (No Touch)")
+
+// RSI filter
+rsiLength   = input.int(14,   title="RSI Length",              minval=1)
+rsiBuyMax   = input.float(69, title="Max RSI allowed for G-Buy",  step=0.5)
+rsiSellMin  = input.float(31, title="Min RSI allowed for G-Sell", step=0.5)
+
+// RSI emergency exit (overrides target/stop while in a trade)
+useRsiExit   = input.bool(true, title="Enable RSI Emergency Exit")
+rsiLongExit  = input.float(75, title="Exit Long if RSI >=",  step=0.5)
+rsiShortExit = input.float(25, title="Exit Short if RSI <=", step=0.5)
+
+// Session control
+signalTime = input.string("1130", title="Wait for G Signal After (HHMM)")
+entryTime  = input.string("1430", title="No New Entry After (HHMM)")
+exitTime   = input.string("1510", title="Exit All Trades At (HHMM)")
+
+startDate = timestamp(2025, 01, 01, 00, 00)
+endDate   = timestamp(2030, 03, 31, 23, 59)
+validDateRange = (time >= startDate and time <= endDate)
+
+signalHour   = int(str.tonumber(str.substring(signalTime, 0, 2)))
+signalMinute = int(str.tonumber(str.substring(signalTime, 2, 4)))
+entryHour    = int(str.tonumber(str.substring(entryTime,  0, 2)))
+entryMinute  = int(str.tonumber(str.substring(entryTime,  2, 4)))
+exitHour     = int(str.tonumber(str.substring(exitTime,   0, 2)))
+exitMinute   = int(str.tonumber(str.substring(exitTime,   2, 4)))
+
+isSignalTime  = (hour > signalHour) or (hour == signalHour and minute >= signalMinute)
+isTradingTime = (hour < entryHour)  or (hour == entryHour  and minute < entryMinute)
+timeOutForDay = (hour > exitHour)   or (hour == exitHour   and minute >= exitMinute)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// POSITION STATUS
+// ════════════════════════════════════════════════════════════════════════════════
+
+notInLongTrade  = strategy.position_size <= 0
+inLongTrade     = strategy.position_size > 0
+inShortTrade    = strategy.position_size < 0
+notInShortTrade = strategy.position_size >= 0
+
+bgcolor(inLongTrade  ? color.new(color.green, 70) : na)
+bgcolor(inShortTrade ? color.new(color.red,   70) : na)
+
+BRIGHT_RED   = color.rgb(255, 0, 0)
+BRIGHT_GREEN = color.rgb(0, 200, 0)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// SPIDY SIGNAL ENGINE (from 07_Spidy_V1)
+// ════════════════════════════════════════════════════════════════════════════════
+
+[st1_line, st1_dir] = ta.supertrend(2.75, 50)
+[st2_line, st2_dir] = ta.supertrend(3.55, 99)
+
+ema_base  = ta.ema(close, 75)
+ema_trend = ta.ema(close, 999)
+
+rsi_val = ta.rsi(close, rsiLength)
+
+st1_bull = st1_dir == -1
+st1_bear = st1_dir ==  1
+st2_bull = st2_dir == -1
+st2_bear = st2_dir ==  1
+
+st1_flipped_bull = st1_bull and st1_bear[1]
+st1_flipped_bear = st1_bear and st1_bull[1]
+st2_flipped_bull = st2_bull and st2_bear[1]
+st2_flipped_bear = st2_bear and st2_bull[1]
+
+both_bull = st1_bull and st2_bull
+both_bear = st1_bear and st2_bear
+
+var bool st_regime_bull = false
+if st1_flipped_bull
+    st_regime_bull := true
+if st1_flipped_bear
+    st_regime_bull := false
+
+st_regime_bear = not st_regime_bull
+
+var bool gbuy_locked  = false
+var bool gsell_locked = false
+
+if st1_flipped_bear
+    gbuy_locked  := false
+if st1_flipped_bull
+    gsell_locked := false
+
+gap_bull = st1_flipped_bull and st2_flipped_bull
+gap_bear = st1_flipped_bear and st2_flipped_bear
+
+price_above_all = close > st1_line and close > st2_line and close > ema_base
+price_below_all = close < st1_line and close < st2_line and close < ema_base
+
+first_bar_both_bull = both_bull and not both_bull[1]
+first_bar_both_bear = both_bear and not both_bear[1]
+
+gbuy_normal = ta.crossover(close, ema_base) and both_bull and not gbuy_locked
+gbuy_gap    = gap_bull and price_above_all and not gbuy_locked
+gbuy_first  = first_bar_both_bull and price_above_all and not gbuy_locked
+
+gsell_normal = ta.crossunder(close, ema_base) and both_bear and not gsell_locked
+gsell_gap    = gap_bear and price_below_all and not gsell_locked
+gsell_first  = first_bar_both_bear and price_below_all and not gsell_locked
+
+var int bmgc_fired = 0
+var int smgc_fired = 0
+if st1_flipped_bear
+    bmgc_fired := 0
+if st1_flipped_bull
+    smgc_fired := 0
+
+raw_bmgc = ta.crossover(ema_base, st1_line) and both_bull and bmgc_fired == 0 and not gbuy_locked
+raw_smgc = ta.crossunder(ema_base, st1_line) and both_bear and smgc_fired == 0 and not gsell_locked
+
+if raw_bmgc
+    bmgc_fired := bmgc_fired + 1
+if raw_smgc
+    smgc_fired := smgc_fired + 1
+
+// ── Blue-line clear-cross confirmation ────────────────────────────────────────
+// The raw G conditions above can fire on a candle that merely TOUCHES the blue
+// ST1 line with its wick. With requireClearCross enabled, a raw signal only
+// ARMS a pending state; the confirmed G-Buy / G-Sell prints on the first candle
+// that is COMPLETELY across the blue line:
+//   G-Buy : the whole candle, wick included, is above st1_line (low > st1_line)
+//   G-Sell: the whole candle, wick included, is below st1_line (high < st1_line)
+// A candle whose wick still touches the blue line does NOT confirm. If ST1
+// flips back before any candle fully clears the line, the pending signal is
+// discarded. The confirming candle becomes the G signal candle, so its
+// high/low are used for the breakout trigger and stop levels below.
+
+raw_gbuy  = gbuy_normal  or gbuy_gap  or gbuy_first  or raw_bmgc
+raw_gsell = gsell_normal or gsell_gap or gsell_first
+
+var bool gbuy_pending  = false
+var bool gsell_pending = false
+
+if st1_flipped_bear
+    gbuy_pending  := false
+if st1_flipped_bull
+    gsell_pending := false
+
+if raw_gbuy
+    gbuy_pending := true
+if raw_gsell
+    gsell_pending := true
+
+candle_clear_above = low  > st1_line   // whole candle above blue line, not touching it
+candle_clear_below = high < st1_line   // whole candle below blue line, not touching it
+
+is_gbuy  = requireClearCross ? (gbuy_pending  and both_bull and candle_clear_above) : raw_gbuy
+is_gsell = requireClearCross ? (gsell_pending and both_bear and candle_clear_below) : raw_gsell
+
+if is_gbuy
+    gbuy_pending := false
+    gbuy_locked  := true
+if is_gsell
+    gsell_pending := false
+    gsell_locked := true
+
+var bool state_bull = false
+if is_gbuy
+    state_bull := true
+if is_gsell
+    state_bull := false
+
+barcolor(state_bull ? BRIGHT_GREEN : BRIGHT_RED)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// OPEN PRICE LEVELS (from 08_OpenPrice_Indicator)
+// ════════════════════════════════════════════════════════════════════════════════
+
+dailyOpen = request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on)
+rawOpen   = manualOpen != 0.0 ? manualOpen : dailyOpen
+basePrice = math.ceil(rawOpen / step) * step
+
+buyAbove  = basePrice + offset
+sellBelow = basePrice - offset
+
+f_cap(l) =>
+    if not na(l)
+        line.set_x2(l, bar_index - 1)
+        line.set_extend(l, extend.none)
+
+f_line(y, col, lw) =>
+    line.new(bar_index, y, bar_index + 1, y, extend=extend.right, color=col, width=lw)
+
+f_label(y, txt, col) =>
+    label.new(bar_index, y, txt + "  " + str.tostring(math.round(y, 2)),
+              style=label.style_label_left, color=col, textcolor=color.white, size=size.small)
+
+var line  lBuyAbove  = na
+var line  lSellBelow = na
+var label lblBuyAbove  = na
+var label lblSellBelow = na
+
+var array<line>  buyTargetLines  = array.new<line>()
+var array<line>  sellTargetLines = array.new<line>()
+var array<label> buyTargetLabels  = array.new<label>()
+var array<label> sellTargetLabels = array.new<label>()
+
+newDay = timeframe.change("D")
+
+if newDay or barstate.isfirst
+    for l in buyTargetLines
+        f_cap(l)
+    for l in sellTargetLines
+        f_cap(l)
+    array.clear(buyTargetLines)
+    array.clear(sellTargetLines)
+
+    for lb in buyTargetLabels
+        label.delete(lb)
+    for lb in sellTargetLabels
+        label.delete(lb)
+    array.clear(buyTargetLabels)
+    array.clear(sellTargetLabels)
+
+    f_cap(lBuyAbove)
+    f_cap(lSellBelow)
+    label.delete(lblBuyAbove)
+    label.delete(lblSellBelow)
+
+    lBuyAbove  := f_line(buyAbove,  color.green, 2)
+    lSellBelow := f_line(sellBelow, color.red,   2)
+    lblBuyAbove  := f_label(buyAbove,  "Buy Above",  color.green)
+    lblSellBelow := f_label(sellBelow, "Sell Below", color.red)
+
+    for i = 1 to nTargets
+        isLast  = i == nTargets
+        transp  = isLast ? 0 : math.max(0, 45 - i * 10)
+        lw      = isLast ? 2 : 1
+        buyCol  = isLast ? color.lime   : color.new(color.green, transp)
+        sellCol = isLast ? color.maroon : color.new(color.red,   transp)
+        lbl     = "Target" + str.tostring(i)
+
+        array.push(buyTargetLines,   f_line(buyAbove  + i * step, buyCol,  lw))
+        array.push(sellTargetLines,  f_line(sellBelow - i * step, sellCol, lw))
+        array.push(buyTargetLabels,  f_label(buyAbove  + i * step, lbl, buyCol))
+        array.push(sellTargetLabels, f_label(sellBelow - i * step, lbl, sellCol))
+
+labelIndex = bar_index + 20
+
+if not na(lblBuyAbove)
+    label.set_x(lblBuyAbove,  labelIndex)
+    label.set_x(lblSellBelow, labelIndex)
+
+for lb in buyTargetLabels
+    label.set_x(lb, labelIndex)
+
+for lb in sellTargetLabels
+    label.set_x(lb, labelIndex)
+
+// ════════════════════════════════════════════════════════════════════════════════
+// DAY DIRECTION LOCK + SIGNAL CANDLE TRACKING
+// ════════════════════════════════════════════════════════════════════════════════
+// After the signal time (default 11:30), the FIRST G signal locks the direction
+// for the whole day: G-Buy day → longs only, G-Sell day → shorts only.
+// The G candle's high/low are marked as breakout trigger levels.
+//
+// tradeTakenToday enforces ONE execution per day: once an entry fires (in either
+// direction), no further entries are allowed for the rest of the day, even if
+// that trade has since closed (target/stop/RSI-exit/time-exit) and another
+// qualifying breakout occurs. Such later breakouts are marked with an X instead.
+//
+// FAKE SIGNAL INVALIDATION: if the breakout for the locked dayDir is vetoed by
+// RSI (X mark), that G-Buy/G-Sell is treated as a fake signal for the day.
+// dayDir resets to 0 (waiting) and the next qualifying G-Buy/G-Sell — in
+// either direction — becomes the new candidate for the day's dayDir. See the
+// "Fake signal invalidation" block further down for the actual reset logic.
+
+var int   dayDir      = 0     // 0 = waiting, 1 = G-Buy day, -1 = G-Sell day
+var float signal_high = na
+var float signal_low  = na
+var bool  tradeTakenToday = false   // one execution per day flag
+
+if newDay
+    dayDir      := 0
+    signal_high := na
+    signal_low  := na
+    tradeTakenToday := false        // reset each day
+
+if is_gbuy and isSignalTime and dayDir >= 0
+    dayDir      := 1
+    signal_high := high
+    signal_low  := low
+
+if is_gsell and isSignalTime and dayDir <= 0
+    dayDir      := -1
+    signal_high := high
+    signal_low  := low
+
+// ── Target selection from the OpenPrice ladder ────────────────────────────────
+// Long : nearest target line (buyAbove + i*step) above the G-Buy high; if it is
+//        closer than minTargetDist points, take the next target up.
+// Short: mirror below the G-Sell low using (sellBelow - i*step).
+f_longTarget(sigHigh) =>
+    i   = math.max(1, math.ceil((sigHigh - buyAbove) / step))
+    lvl = buyAbove + i * step
+    lvl - sigHigh < minTargetDist ? lvl + step : lvl
+
+f_shortTarget(sigLow) =>
+    i   = math.max(1, math.ceil((sellBelow - sigLow) / step))
+    lvl = sellBelow - i * step
+    sigLow - lvl < minTargetDist ? lvl - step : lvl
+
+longTarget  = dayDir == 1  and not na(signal_high) ? f_longTarget(signal_high) : na
+shortTarget = dayDir == -1 and not na(signal_low)  ? f_shortTarget(signal_low) : na
+
+// ── Stop loss as reverse target from the same ladder ─────────────────────────
+// The full ladder of levels drawn by the indicator, top to bottom:
+//   ... buyAbove + 2*step, buyAbove + step, buyAbove, sellBelow,
+//       sellBelow - step, sellBelow - 2*step ...
+// Long : first ladder level BELOW the G-Buy low; if closer than minStopDist
+//        points, take the next level down.
+// Short: first ladder level ABOVE the G-Sell high; if closer than minStopDist
+//        points, take the next level up.
+f_nextBelow(p) =>
+    float lvl = na
+    if p > buyAbove
+        i = math.ceil((p - buyAbove) / step) - 1   // largest i with buyAbove + i*step < p
+        lvl := i >= 1 ? buyAbove + i * step : buyAbove
+    else if p > sellBelow
+        lvl := sellBelow
+    else
+        j = math.floor((sellBelow - p) / step) + 1 // smallest j with sellBelow - j*step < p
+        lvl := sellBelow - j * step
+    lvl
+
+f_nextAbove(p) =>
+    float lvl = na
+    if p < sellBelow
+        i = math.ceil((sellBelow - p) / step) - 1  // largest i with sellBelow - i*step > p
+        lvl := i >= 1 ? sellBelow - i * step : sellBelow
+    else if p < buyAbove
+        lvl := buyAbove
+    else
+        j = math.floor((p - buyAbove) / step) + 1  // smallest j with buyAbove + j*step > p
+        lvl := buyAbove + j * step
+    lvl
+
+f_longStop(sigLow) =>
+    lvl = f_nextBelow(sigLow)
+    sigLow - lvl < minStopDist ? f_nextBelow(lvl) : lvl
+
+f_shortStop(sigHigh) =>
+    lvl = f_nextAbove(sigHigh)
+    lvl - sigHigh < minStopDist ? f_nextAbove(lvl) : lvl
+
+longStop  = dayDir == 1  and not na(signal_low)  ? f_longStop(signal_low)   : na
+shortStop = dayDir == -1 and not na(signal_high) ? f_shortStop(signal_high) : na
+
+// Buffered signal levels used for entries and stops
+sig_high_buf = signal_high + buffer
+sig_low_buf  = signal_low  - buffer
+
+// ════════════════════════════════════════════════════════════════════════════════
+// ENTRY / EXIT LOGIC
+// ════════════════════════════════════════════════════════════════════════════════
+
+// Price-based trigger (unfiltered) — this is the raw breakout condition on the
+// individual candle, independent of the original G-Buy/G-Sell signal's RSI.
+// Also gated by tradeTakenToday so only the first qualifying breakout of the
+// day can ever reach the entry stage.
+long_price_trigger  = dayDir == 1  and not na(signal_high) and ta.crossover(low, sig_high_buf)  and notInLongTrade  and isTradingTime and validDateRange and not tradeTakenToday
+short_price_trigger = dayDir == -1 and not na(signal_low)  and ta.crossunder(high, sig_low_buf) and notInShortTrade and isTradingTime and validDateRange and not tradeTakenToday
+
+// RSI is checked candle-by-candle only at this entry-trigger stage, AFTER the
+// G-Buy/G-Sell signal has already locked dayDir — not at signal formation.
+// Long : take the trade if RSI <= rsiBuyMax (69), else mark X and skip.
+// Short: take the trade if RSI >= rsiSellMin (31), else mark X and skip.
+rsi_blocks_long  = rsi_val > rsiBuyMax
+rsi_blocks_short = rsi_val < rsiSellMin
+
+long_entry_cond  = long_price_trigger  and not rsi_blocks_long
+short_entry_cond = short_price_trigger and not rsi_blocks_short
+
+// Candles where price triggered the breakout but RSI vetoed the entry
+long_blocked_by_rsi  = long_price_trigger  and rsi_blocks_long
+short_blocked_by_rsi = short_price_trigger and rsi_blocks_short
+
+// ── Fake signal invalidation ──────────────────────────────────────────────────
+// If the day's locked breakout is vetoed by RSI, treat the G-Buy/G-Sell that
+// set dayDir as a FAKE signal. Reset dayDir (and the signal high/low) so the
+// day goes back to "waiting" — the next qualifying G-Buy/G-Sell, in EITHER
+// direction, becomes the new candidate for the day. Since signal_high/low are
+// cleared, this same fake signal can never re-trigger a breakout attempt.
+if long_blocked_by_rsi
+    dayDir      := 0
+    signal_high := na
+    signal_low  := na
+
+if short_blocked_by_rsi
+    dayDir      := 0
+    signal_high := na
+    signal_low  := na
+
+// Candles where price triggered a valid breakout (that would otherwise be a
+// fresh entry) but a trade was already taken earlier in the day — one
+// execution per day limit.
+long_blocked_by_daylimit  = dayDir == 1  and not na(signal_high) and ta.crossover(low, sig_high_buf)  and notInLongTrade  and isTradingTime and validDateRange and tradeTakenToday
+short_blocked_by_daylimit = dayDir == -1 and not na(signal_low)  and ta.crossunder(high, sig_low_buf) and notInShortTrade and isTradingTime and validDateRange and tradeTakenToday
+
+if long_entry_cond
+    strategy.entry("Long", strategy.long, comment="GBuy Breakout", alert_message="Spidy OP Long")
+    strategy.exit("Long TP/SL", "Long", limit=longTarget, stop=longStop, alert_message="Spidy OP Long Exit")
+    tradeTakenToday := true
+
+if short_entry_cond
+    strategy.entry("Short", strategy.short, comment="GSell Breakdown", alert_message="Spidy OP Short")
+    strategy.exit("Short TP/SL", "Short", limit=shortTarget, stop=shortStop, alert_message="Spidy OP Short Exit")
+    tradeTakenToday := true
+
+// Close all open positions at exit time
+if timeOutForDay and inLongTrade
+    strategy.close("Long",  comment="Time Exit")
+if timeOutForDay and inShortTrade
+    strategy.close("Short", comment="Time Exit")
+
+// ── RSI emergency exit ────────────────────────────────────────────────────────
+// While already in a trade, if RSI blows past the exit threshold, close the
+// trade immediately — regardless of where price is relative to the target/stop.
+rsi_exit_long  = useRsiExit and inLongTrade  and rsi_val >= rsiLongExit
+rsi_exit_short = useRsiExit and inShortTrade and rsi_val <= rsiShortExit
+
+if rsi_exit_long
+    strategy.close("Long", comment="RSI Exit")
+if rsi_exit_short
+    strategy.close("Short", comment="RSI Exit")
+
+// ════════════════════════════════════════════════════════════════════════════════
+// PLOTS
+// ════════════════════════════════════════════════════════════════════════════════
+
+plot(st1_line,  "ST1 Blue",  color=color.blue,    linewidth=2)
+plot(st2_line,  "ST2 Red",   color=color.red,     linewidth=2)
+plot(ema_base,  "Baseline",  color=color.aqua,    linewidth=2)
+plot(ema_trend, "Trend EMA", color=color.fuchsia, linewidth=2)
+
+p1 = plot(st1_line, display=display.none)
+p2 = plot(st2_line, display=display.none)
+
+fill(p1, p2,
+     color = both_bull ? color.new(color.green, 83) :
+             both_bear ? color.new(color.red,   88) :
+             color.new(color.gray, 92))
+
+// Signal candle high (blue) and low (red) — entry trigger / stop levels
+plot(sig_high_buf, "Signal High", color=color.blue, linewidth=1, style=plot.style_stepline)
+plot(sig_low_buf,  "Signal Low",  color=color.red,  linewidth=1, style=plot.style_stepline)
+
+// Selected target and stop from the OpenPrice ladder
+plot(dayDir == 1 ? longTarget : dayDir == -1 ? shortTarget : na,
+     "Selected Target", color=color.orange, linewidth=2, style=plot.style_linebr)
+plot(dayDir == 1 ? longStop : dayDir == -1 ? shortStop : na,
+     "Selected Stop", color=color.yellow, linewidth=2, style=plot.style_linebr)
+
+plotshape(is_gsell and isSignalTime,
+     "GSell", shape.labeldown, location.abovebar,
+     color.new(color.maroon, 0), text="G-Sell", textcolor=color.white, size=size.normal)
+
+plotshape(is_gbuy and isSignalTime,
+     "GBuy", shape.labelup, location.belowbar,
+     color.new(color.lime, 0), text="G-Buy", textcolor=color.black, size=size.normal)
+
+// Raw (unconfirmed) signals waiting for a candle fully across the blue line
+plotshape(requireClearCross and raw_gbuy and not is_gbuy and isSignalTime,
+     "GBuy Armed", shape.circle, location.belowbar, color.new(color.lime, 40), size=size.tiny)
+plotshape(requireClearCross and raw_gsell and not is_gsell and isSignalTime,
+     "GSell Armed", shape.circle, location.abovebar, color.new(color.maroon, 40), size=size.tiny)
+
+plotshape(long_entry_cond,  "LongEntry",  shape.triangleup,   location.belowbar, color.new(color.blue, 0), size=size.small)
+plotshape(short_entry_cond, "ShortEntry", shape.triangledown, location.abovebar, color.new(color.red,  0), size=size.small)
+
+plotshape(long_blocked_by_rsi,  "Long Blocked (RSI)",  shape.xcross, location.belowbar, color.new(color.blue, 0), size=size.small, text="X")
+plotshape(short_blocked_by_rsi, "Short Blocked (RSI)", shape.xcross, location.abovebar, color.new(color.red,  0), size=size.small, text="X")
+
+plotshape(long_blocked_by_rsi,  "Fake GBuy (RSI Invalidated)",  shape.labeldown, location.abovebar, color.new(color.gray, 0), text="Fake Buy",  textcolor=color.white, size=size.small)
+plotshape(short_blocked_by_rsi, "Fake GSell (RSI Invalidated)", shape.labelup,   location.belowbar, color.new(color.gray, 0), text="Fake Sell", textcolor=color.white, size=size.small)
+
+plotshape(long_blocked_by_daylimit,  "Long Blocked (Day Limit)",  shape.xcross, location.belowbar, color.new(color.gray, 0), size=size.small, text="X")
+plotshape(short_blocked_by_daylimit, "Short Blocked (Day Limit)", shape.xcross, location.abovebar, color.new(color.gray, 0), size=size.small, text="X")
+
+alertcondition(is_gbuy,          "G Buy",       "Spidy OP G Buy confirmed")
+alertcondition(is_gsell,         "G Sell",      "Spidy OP G Sell confirmed")
+alertcondition(long_entry_cond,  "Long Entry",  "Spidy OP Long Entry")
+alertcondition(short_entry_cond, "Short Entry", "Spidy OP Short Entry")
+alertcondition(long_blocked_by_rsi,  "Long Blocked by RSI",  "Spidy OP Long blocked — RSI too high, G-Buy invalidated as fake, waiting for next signal")
+alertcondition(short_blocked_by_rsi, "Short Blocked by RSI", "Spidy OP Short blocked — RSI too low, G-Sell invalidated as fake, waiting for next signal")
+alertcondition(long_blocked_by_daylimit,  "Long Blocked by Day Limit",  "Spidy OP Long blocked — already traded today")
+alertcondition(short_blocked_by_daylimit, "Short Blocked by Day Limit", "Spidy OP Short blocked — already traded today")
+alertcondition(rsi_exit_long,  "RSI Emergency Exit Long",  "Spidy OP Long closed early — RSI overbought")
+alertcondition(rsi_exit_short, "RSI Emergency Exit Short", "Spidy OP Short closed early — RSI oversold")
+
+plotshape(rsi_exit_long,  "RSI Exit Long",  shape.labeldown, location.abovebar, color.new(color.orange, 0), text="RSI-X", textcolor=color.white, size=size.small)
+plotshape(rsi_exit_short, "RSI Exit Short", shape.labelup,   location.belowbar, color.new(color.orange, 0), text="RSI-X", textcolor=color.white, size=size.small)
