@@ -155,28 +155,34 @@ raw_gsell = gsell_normal or gsell_gap or gsell_first
 var bool gbuy_pending  = false
 var bool gsell_pending = false
 
-if st1_flipped_bear
+// Reset pending on flip or new day
+if st1_flipped_bear or newDay
     gbuy_pending  := false
-if st1_flipped_bull
+if st1_flipped_bull or newDay
     gsell_pending := false
 
+// Arm pending when raw signal fires; persists until a clear-cross candle arrives
 if raw_gbuy
     gbuy_pending := true
 if raw_gsell
     gsell_pending := true
 
-candle_clear_above = low  > st1_line   // whole candle above blue line, not touching it
-candle_clear_below = high < st1_line   // whole candle below blue line, not touching it
+// Whole candle (wick included) is fully across the blue ST1 line — zero touching allowed
+candle_clear_above = low  > st1_line
+candle_clear_below = high < st1_line
 
-is_gbuy  = requireClearCross ? (gbuy_pending  and both_bull and candle_clear_above) : raw_gbuy
-is_gsell = requireClearCross ? (gsell_pending and both_bear and candle_clear_below) : raw_gsell
+// Include raw_gbuy/raw_gsell directly so same-bar confirmation works:
+// Pine evaluates the expression BEFORE the `if raw_gbuy: gbuy_pending := true` block
+// runs, so gbuy_pending is stale by one bar. Adding raw_gbuy here closes that gap.
+is_gbuy  = requireClearCross ? ((raw_gbuy or gbuy_pending) and both_bull and candle_clear_above) : raw_gbuy
+is_gsell = requireClearCross ? ((raw_gsell or gsell_pending) and both_bear and candle_clear_below) : raw_gsell
 
 if is_gbuy
     gbuy_pending := false
     gbuy_locked  := true
 if is_gsell
     gsell_pending := false
-    gsell_locked := true
+    gsell_locked  := true
 
 var bool state_bull = false
 if is_gbuy
