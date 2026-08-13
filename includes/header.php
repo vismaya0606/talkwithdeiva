@@ -84,8 +84,11 @@ $ogimg = setting('og_image') ?: setting('hero_image');
         <li class="nav-item"><a class="nav-link" href="<?= e(base_url()) ?>about.php">About Us</a></li>
         <li class="nav-item"><a class="nav-link" href="<?= e(base_url()) ?>index.php#gallery">Gallery</a></li>
       </ul>
-      <div class="d-flex gap-2 flex-wrap">
-        <a class="btn btn-brand btn-sm px-3" href="<?= e(base_url()) ?>register.php#register-form">Register Now</a>
+      <div class="d-flex gap-2 flex-wrap align-items-center">
+        <form class="razorpay-nav-btn">
+          <script src="https://checkout.razorpay.com/v1/payment-button.js"
+                  data-payment_button_id="pl_TPAlF9zcU9DQi4" async></script>
+        </form>
         <a class="btn btn-brand-outline-light btn-sm px-3" href="<?= e(base_url()) ?>contact.php">Contact Us</a>
       </div>
     </div>
