@@ -26,14 +26,6 @@ h1,h2,h3,h4,h5,.fw-bold{color:var(--heading);}
 .brand-nav .nav-link:hover,.brand-nav .nav-link.active{color:var(--brand-primary);}
 .nav-spacer{height:74px;}
 
-/* Razorpay Payment Button inside navbar */
-.razorpay-nav-btn{margin:0;padding:0;}
-.razorpay-nav-btn button{
-  height:32px!important;font-size:.8rem!important;
-  padding:0 14px!important;border-radius:8px!important;
-  font-weight:600!important;letter-spacing:.3px!important;
-}
-
 /* Buttons / text helpers */
 .btn-brand,.brand-btn{
   background:var(--brand-primary);border:2px solid var(--brand-primary);
