@@ -1,23 +1,35 @@
 <?php
-/** Reusable registration form (used on home page + register.php). */
+/**
+ * Reusable registration form (used on register.php and home page).
+ * $priced_services must be set by the including page; if not, no course
+ * dropdown is shown and the form saves a plain enquiry.
+ */
 require_once __DIR__ . '/../config/functions.php';
 
 $syllabus_options = ['CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE'];
 $heard_options    = ['Instagram', 'Facebook', 'WhatsApp', 'Friends', 'Others'];
 
-$ok    = flash('reg_success');
-$err   = flash('reg_error');
-$old   = $_SESSION['reg_old'] ?? [];
+$ok  = flash('reg_success');
+$err = flash('reg_error');
+$old = $_SESSION['reg_old'] ?? [];
 unset($_SESSION['reg_old']);
 
-// Fetch priced services so the buyer can choose which course to pay for.
-$priced_services_stmt = db()->prepare(
-    'SELECT id, title, price FROM services
-     WHERE tenant_id = ? AND price IS NOT NULL AND price > 0
-     ORDER BY display_order ASC'
-);
-$priced_services_stmt->execute([tenant_id()]);
-$priced_services = $priced_services_stmt->fetchAll();
+// Fetch priced services if the including page hasn't already done it.
+if (!isset($priced_services)) {
+    try {
+        $ps = db()->prepare(
+            'SELECT id, title, price FROM services
+             WHERE tenant_id = ? AND price IS NOT NULL AND price > 0
+             ORDER BY display_order ASC'
+        );
+        $ps->execute([tenant_id()]);
+        $priced_services = $ps->fetchAll();
+    } catch (Exception $e) {
+        $priced_services = [];
+    }
+}
+
+$has_courses = !empty($priced_services);
 ?>
 <div id="register-form" class="register-card p-4 p-md-5 bg-white rounded shadow-sm">
   <?php if ($ok): ?>
@@ -27,8 +39,10 @@ $priced_services = $priced_services_stmt->fetchAll();
     <div class="alert alert-danger"><?= e($err) ?></div>
   <?php endif; ?>
 
-  <form action="<?= e(base_url()) ?>register.php" method="post" novalidate class="needs-validation row g-3">
+  <form action="<?= e(base_url()) ?>register.php" method="post"
+        novalidate class="needs-validation row g-3">
     <?= csrf_field() ?>
+
     <div class="col-md-6">
       <label class="form-label">Parent Name <span class="text-danger">*</span></label>
       <input type="text" name="full_name" class="form-control" required maxlength="150"
@@ -61,8 +75,10 @@ $priced_services = $priced_services_stmt->fetchAll();
       <select name="syllabus" class="form-select">
         <option value="">-- Select --</option>
         <?php foreach ($syllabus_options as $opt): ?>
-          <option value="<?= e($opt) ?>" <?= (($old['syllabus'] ?? '') === $opt) ? 'selected' : '' ?>>
-            <?= e($opt) ?></option>
+          <option value="<?= e($opt) ?>"
+            <?= (($old['syllabus'] ?? '') === $opt) ? 'selected' : '' ?>>
+            <?= e($opt) ?>
+          </option>
         <?php endforeach; ?>
       </select>
     </div>
@@ -76,16 +92,20 @@ $priced_services = $priced_services_stmt->fetchAll();
       <select name="heard_about" class="form-select">
         <option value="">-- Select --</option>
         <?php foreach ($heard_options as $opt): ?>
-          <option value="<?= e($opt) ?>" <?= (($old['heard_about'] ?? '') === $opt) ? 'selected' : '' ?>>
-            <?= e($opt) ?></option>
+          <option value="<?= e($opt) ?>"
+            <?= (($old['heard_about'] ?? '') === $opt) ? 'selected' : '' ?>>
+            <?= e($opt) ?>
+          </option>
         <?php endforeach; ?>
       </select>
     </div>
     <div class="col-12">
       <label class="form-label">What is your primary question or expectation from this webinar?</label>
-      <textarea name="message" class="form-control" rows="3" maxlength="1000"><?= e($old['message'] ?? '') ?></textarea>
+      <textarea name="message" class="form-control" rows="3"
+                maxlength="1000"><?= e($old['message'] ?? '') ?></textarea>
     </div>
-    <?php if ($priced_services): ?>
+
+    <?php if ($has_courses): ?>
     <div class="col-12">
       <label class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
       <select name="service_id" class="form-select form-select-lg" required>
@@ -100,10 +120,22 @@ $priced_services = $priced_services_stmt->fetchAll();
       <div class="invalid-feedback">Please select a course.</div>
     </div>
     <?php endif; ?>
+
     <div class="col-12">
       <button type="submit" class="btn btn-lg brand-btn w-100">
-        <?= $priced_services ? 'Continue to Payment' : 'Submit Registration' ?>
+        <i class="bi bi-lock-fill me-1"></i>
+        <?= $has_courses ? 'Register &amp; Pay Now' : 'Submit Registration' ?>
       </button>
     </div>
+
+    <?php if ($has_courses): ?>
+    <p class="text-muted small mb-0 col-12 text-center">
+      <i class="bi bi-shield-lock me-1"></i>
+      Payments are processed securely by Razorpay.
+      By registering you agree to our
+      <a href="<?= e(base_url()) ?>terms.php">Terms</a> &amp;
+      <a href="<?= e(base_url()) ?>refund.php">Refund Policy</a>.
+    </p>
+    <?php endif; ?>
   </form>
 </div>
