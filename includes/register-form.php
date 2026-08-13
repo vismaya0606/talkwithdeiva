@@ -1,9 +1,5 @@
 <?php
-/**
- * Reusable registration form (used on register.php and home page).
- * $priced_services must be set by the including page; if not, no course
- * dropdown is shown and the form saves a plain enquiry.
- */
+/** Reusable registration form (used on register.php and home page). */
 require_once __DIR__ . '/../config/functions.php';
 
 $syllabus_options = ['CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE'];
@@ -13,23 +9,6 @@ $ok  = flash('reg_success');
 $err = flash('reg_error');
 $old = $_SESSION['reg_old'] ?? [];
 unset($_SESSION['reg_old']);
-
-// Fetch priced services if the including page hasn't already done it.
-if (!isset($priced_services)) {
-    try {
-        $ps = db()->prepare(
-            'SELECT id, title, price FROM services
-             WHERE tenant_id = ? AND price IS NOT NULL AND price > 0
-             ORDER BY display_order ASC'
-        );
-        $ps->execute([tenant_id()]);
-        $priced_services = $ps->fetchAll();
-    } catch (Exception $e) {
-        $priced_services = [];
-    }
-}
-
-$has_courses = !empty($priced_services);
 ?>
 <div id="register-form" class="register-card p-4 p-md-5 bg-white rounded shadow-sm">
   <?php if ($ok): ?>
@@ -105,37 +84,14 @@ $has_courses = !empty($priced_services);
                 maxlength="1000"><?= e($old['message'] ?? '') ?></textarea>
     </div>
 
-    <?php if ($has_courses): ?>
-    <div class="col-12">
-      <label class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
-      <select name="service_id" class="form-select form-select-lg" required>
-        <option value="">-- Choose a course --</option>
-        <?php foreach ($priced_services as $svc): ?>
-          <option value="<?= (int)$svc['id'] ?>"
-            <?= ((int)($old['service_id'] ?? 0) === (int)$svc['id']) ? 'selected' : '' ?>>
-            <?= e($svc['title']) ?> — <?= e(format_price($svc['price'])) ?>
-          </option>
-        <?php endforeach; ?>
-      </select>
-      <div class="invalid-feedback">Please select a course.</div>
-    </div>
-    <?php endif; ?>
-
     <div class="col-12">
       <button type="submit" class="btn btn-lg brand-btn w-100">
-        <i class="bi bi-lock-fill me-1"></i>
-        <?= $has_courses ? 'Register &amp; Pay Now' : 'Submit Registration' ?>
+        <i class="bi bi-lock-fill me-1"></i> Register &amp; Pay Now
       </button>
     </div>
-
-    <?php if ($has_courses): ?>
     <p class="text-muted small mb-0 col-12 text-center">
       <i class="bi bi-shield-lock me-1"></i>
       Payments are processed securely by Razorpay.
-      By registering you agree to our
-      <a href="<?= e(base_url()) ?>terms.php">Terms</a> &amp;
-      <a href="<?= e(base_url()) ?>refund.php">Refund Policy</a>.
     </p>
-    <?php endif; ?>
   </form>
 </div>
