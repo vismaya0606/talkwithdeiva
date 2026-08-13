@@ -78,8 +78,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $err = flash('pay_error');
-$old = $_SESSION['pay_old'] ?? [];
-unset($_SESSION['pay_old']);
+// pay_old holds values from a failed/validation-failed POST;
+// checkout_prefill carries name/email/phone forwarded from the registration form.
+$old = $_SESSION['pay_old'] ?? $_SESSION['checkout_prefill'] ?? [];
+unset($_SESSION['pay_old'], $_SESSION['checkout_prefill']);
 
 $page_title       = 'Checkout | ' . setting('site_name');
 $page_description = 'Complete your booking with ' . setting('site_name') . ' securely online.';
