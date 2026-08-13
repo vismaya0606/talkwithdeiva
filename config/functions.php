@@ -362,41 +362,37 @@ function format_price($amount): string
 }
 
 /* ------------------------------------------------------------------ *
- *  Instamojo payment gateway
+ *  Razorpay payment gateway
  *  Credentials live in the per-tenant settings:
- *    instamojo_api_key, instamojo_auth_token, instamojo_mode (test|live)
+ *    razorpay_key_id, razorpay_key_secret, razorpay_mode (test|live)
  * ------------------------------------------------------------------ */
-function instamojo_enabled(): bool
+function razorpay_enabled(): bool
 {
-    return setting('instamojo_api_key') !== '' && setting('instamojo_auth_token') !== '';
-}
-
-function instamojo_api_base(): string
-{
-    return setting('instamojo_mode', 'test') === 'live'
-        ? 'https://www.instamojo.com'
-        : 'https://test.instamojo.com';
+    return setting('razorpay_key_id') !== '' && setting('razorpay_key_secret') !== '';
 }
 
 /**
- * Low-level Instamojo REST call. Returns the decoded JSON response or
- * null on transport failure.
+ * Creates a Razorpay order and returns ['id' => order_id, ...] or null on failure.
+ * Amount is in rupees; Razorpay expects paise (×100).
  */
-function instamojo_request(string $method, string $path, array $data = []): ?array
+function razorpay_create_order(float $amount, string $receipt = ''): ?array
 {
-    $ch = curl_init(instamojo_api_base() . $path);
+    $keyId     = setting('razorpay_key_id');
+    $keySecret = setting('razorpay_key_secret');
+
+    $ch = curl_init('https://api.razorpay.com/v1/orders');
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT        => 30,
-        CURLOPT_HTTPHEADER     => [
-            'X-Api-Key: ' . setting('instamojo_api_key'),
-            'X-Auth-Token: ' . setting('instamojo_auth_token'),
-        ],
+        CURLOPT_POST           => true,
+        CURLOPT_USERPWD        => $keyId . ':' . $keySecret,
+        CURLOPT_HTTPHEADER     => ['Content-Type: application/json', 'Accept: application/json'],
+        CURLOPT_POSTFIELDS     => json_encode([
+            'amount'   => (int) round($amount * 100),
+            'currency' => 'INR',
+            'receipt'  => $receipt,
+        ]),
     ]);
-    if (strtoupper($method) === 'POST') {
-        curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-    }
     $body = curl_exec($ch);
     curl_close($ch);
 
@@ -404,58 +400,21 @@ function instamojo_request(string $method, string $path, array $data = []): ?arr
         return null;
     }
     $json = json_decode($body, true);
-    return is_array($json) ? $json : null;
-}
-
-/**
- * Creates an Instamojo payment request and returns
- * ['id' => ..., 'longurl' => ...] or null on failure.
- */
-function instamojo_create_payment_request(
-    string $purpose,
-    float $amount,
-    string $buyerName,
-    string $email,
-    string $phone,
-    string $redirectUrl
-): ?array {
-    $res = instamojo_request('POST', '/api/1.1/payment-requests/', [
-        'purpose'      => $purpose,
-        'amount'       => number_format($amount, 2, '.', ''),
-        'buyer_name'   => $buyerName,
-        'email'        => $email,
-        'phone'        => $phone,
-        'redirect_url' => $redirectUrl,
-        'send_email'   => 'False',
-        'send_sms'     => 'False',
-        'allow_repeated_payments' => 'False',
-    ]);
-
-    if (!$res || empty($res['success']) || empty($res['payment_request']['longurl'])) {
+    if (!is_array($json) || empty($json['id'])) {
         return null;
     }
-    return [
-        'id'      => (string) $res['payment_request']['id'],
-        'longurl' => (string) $res['payment_request']['longurl'],
-    ];
+    return $json;
 }
 
 /**
- * Verifies a payment against the gateway after the buyer is redirected
- * back. Returns 'success', 'failed' or null when verification could not
- * be completed.
+ * Verifies a Razorpay payment by validating the HMAC-SHA256 signature.
+ * Returns true only when the signature is valid (payment is genuine).
  */
-function instamojo_verify_payment(string $paymentRequestId, string $paymentId): ?string
+function razorpay_verify_payment(string $orderId, string $paymentId, string $signature): bool
 {
-    $res = instamojo_request(
-        'GET',
-        '/api/1.1/payment-requests/' . rawurlencode($paymentRequestId) . '/' . rawurlencode($paymentId) . '/'
-    );
-    if (!$res || empty($res['success'])) {
-        return null;
-    }
-    $status = $res['payment_request']['payment']['status'] ?? '';
-    return $status === 'Credit' ? 'success' : 'failed';
+    $keySecret = setting('razorpay_key_secret');
+    $expected  = hash_hmac('sha256', $orderId . '|' . $paymentId, $keySecret);
+    return hash_equals($expected, $signature);
 }
 
 function flash(string $key, ?string $msg = null): ?string

@@ -210,9 +210,9 @@ INSERT INTO `settings` (`tenant_id`,`setting_key`,`setting_value`) VALUES
   (1,'meta_description','Official website of Your Name — entrepreneur, mentor and public speaker. Explore services, gallery and register today.'),
   (1,'meta_keywords','mentor, entrepreneur, public speaker, coaching'),
   (1,'og_image',''),
-  (1,'instamojo_api_key',''),
-  (1,'instamojo_auth_token',''),
-  (1,'instamojo_mode','test');
+  (1,'razorpay_key_id',''),
+  (1,'razorpay_key_secret',''),
+  (1,'razorpay_mode','test');
 
 INSERT INTO `services` (`tenant_id`,`title`,`description`,`price`,`icon`,`display_order`) VALUES
   (1,'Mentorship','One-on-one mentorship to help you reach your personal and professional goals.',999.00,'bi-people-fill',1),
