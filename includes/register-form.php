@@ -9,6 +9,15 @@ $ok    = flash('reg_success');
 $err   = flash('reg_error');
 $old   = $_SESSION['reg_old'] ?? [];
 unset($_SESSION['reg_old']);
+
+// Fetch priced services so the buyer can choose which course to pay for.
+$priced_services_stmt = db()->prepare(
+    'SELECT id, title, price FROM services
+     WHERE tenant_id = ? AND price IS NOT NULL AND price > 0
+     ORDER BY display_order ASC'
+);
+$priced_services_stmt->execute([tenant_id()]);
+$priced_services = $priced_services_stmt->fetchAll();
 ?>
 <div id="register-form" class="register-card p-4 p-md-5 bg-white rounded shadow-sm">
   <?php if ($ok): ?>
@@ -76,8 +85,25 @@ unset($_SESSION['reg_old']);
       <label class="form-label">What is your primary question or expectation from this webinar?</label>
       <textarea name="message" class="form-control" rows="3" maxlength="1000"><?= e($old['message'] ?? '') ?></textarea>
     </div>
+    <?php if ($priced_services): ?>
     <div class="col-12">
-      <button type="submit" class="btn btn-lg brand-btn w-100">Submit Registration</button>
+      <label class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
+      <select name="service_id" class="form-select form-select-lg" required>
+        <option value="">-- Choose a course --</option>
+        <?php foreach ($priced_services as $svc): ?>
+          <option value="<?= (int)$svc['id'] ?>"
+            <?= ((int)($old['service_id'] ?? 0) === (int)$svc['id']) ? 'selected' : '' ?>>
+            <?= e($svc['title']) ?> — <?= e(format_price($svc['price'])) ?>
+          </option>
+        <?php endforeach; ?>
+      </select>
+      <div class="invalid-feedback">Please select a course.</div>
+    </div>
+    <?php endif; ?>
+    <div class="col-12">
+      <button type="submit" class="btn btn-lg brand-btn w-100">
+        <?= $priced_services ? 'Continue to Payment' : 'Submit Registration' ?>
+      </button>
     </div>
   </form>
 </div>

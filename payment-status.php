@@ -1,17 +1,20 @@
 <?php
 /**
- * Payment result page. Instamojo redirects the buyer here with
- * ?payment_id=...&payment_request_id=... (plus our own ?ref= row id).
- * The payment is verified server-side against the gateway before the
- * result is shown and stored.
+ * Payment result page. After the buyer completes (or fails) the Razorpay
+ * checkout modal, the JS handler posts the payment identifiers here.
+ * The signature is verified server-side before recording the result.
  */
 require_once __DIR__ . '/config/functions.php';
+start_session();
 
 $tid = tenant_id();
 
-$ref                = (int)($_GET['ref'] ?? 0);
-$payment_id         = trim($_GET['payment_id'] ?? '');
-$payment_request_id = trim($_GET['payment_request_id'] ?? '');
+// Accept POST (from the Razorpay JS handler form) or GET (for page reloads
+// by already-verified payments, e.g. after redirect from confirmation email).
+$ref        = (int)(($_POST['ref'] ?? $_GET['ref']) ?? 0);
+$order_id   = trim(($_POST['razorpay_order_id']   ?? $_GET['razorpay_order_id'])   ?? '');
+$payment_id = trim(($_POST['razorpay_payment_id'] ?? $_GET['razorpay_payment_id']) ?? '');
+$signature  = trim($_POST['razorpay_signature'] ?? '');
 
 $payment = null;
 if ($ref > 0) {
@@ -20,17 +23,28 @@ if ($ref > 0) {
     $payment = $stmt->fetch() ?: null;
 }
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $payment) {
+    require_csrf();
+}
+
 $state = 'unknown'; // success | failed | unknown
 
 if ($payment && $payment['status'] === 'success') {
     // Already verified (e.g. page reloaded).
     $state      = 'success';
     $payment_id = $payment['payment_id'];
-} elseif (
-    $payment && $payment_id !== '' && $payment_request_id !== ''
-    && $payment['payment_request_id'] === $payment_request_id
-) {
-    $verified = instamojo_verify_payment($payment_request_id, $payment_id);
+} elseif ($payment && $payment['status'] !== 'success') {
+    if ($signature !== '' && $order_id !== '' && $payment_id !== ''
+        && $payment['payment_request_id'] === $order_id
+    ) {
+        // Verify Razorpay signature: HMAC-SHA256(order_id|payment_id, key_secret)
+        $verified = razorpay_verify_payment($order_id, $payment_id, $signature)
+            ? 'success' : 'failed';
+    } else {
+        // No valid signature sent — treat as a failed / cancelled payment.
+        $verified = ($order_id !== '' || $payment_id !== '') ? 'failed' : null;
+    }
+
     if ($verified !== null) {
         $state = $verified;
         db()->prepare('UPDATE payments SET payment_id = ?, status = ? WHERE id = ? AND tenant_id = ?')
