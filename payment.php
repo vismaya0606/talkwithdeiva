@@ -18,13 +18,13 @@ include __DIR__ . '/includes/header.php';
       <h2 class="section-title mt-3">Registration Saved!</h2>
       <p class="text-muted mb-1">Your details have been received.</p>
       <p class="text-muted mb-4">
-        Please complete your <strong>course fee payment</strong> below to confirm your enrollment.
+        Please complete your <strong>course fee payment of ₹299</strong> below to confirm your enrollment.
       </p>
 
       <div class="d-flex justify-content-center mb-3">
         <form>
           <script src="https://checkout.razorpay.com/v1/payment-button.js"
-                  data-payment_button_id="pl_TPAlF9zcU9DQi4" async></script>
+                  data-payment_button_id="pl_TP5tjzYsvoaAjs" async></script>
         </form>
       </div>
 
