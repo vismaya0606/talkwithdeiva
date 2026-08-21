@@ -7,35 +7,26 @@ $tid = tenant_id();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
 
-    $allowed_professions = [
-        'Parent of a child aged 0–8 years', 'Expecting Parent',
-        'Primary School Teacher', 'Parent & Teacher', 'Other',
+    $allowed_grades = [
+        'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5',
+        'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10',
     ];
-    $allowed_ages = [
-        'Expecting', '0–1 year', '2–3 years', '4–5 years', '6–8 years',
-        'More than one child in the 0–8 age group', 'Not Applicable – Teacher',
-    ];
-    $allowed_heard = [
-        'Instagram', 'Facebook', 'WhatsApp', 'YouTube',
-        'Friend / Family', 'School / Teacher', 'Other',
+    $allowed_syllabus = [
+        'CBSE', 'ICSE', 'State Board', 'IB', 'Cambridge / IGCSE', 'Other',
     ];
 
     $data = [
-        'full_name'   => trim($_POST['full_name']   ?? ''),
-        'mobile'      => trim($_POST['mobile']       ?? ''),
-        'email'       => trim($_POST['email']        ?? ''),
-        'profession'  => trim($_POST['profession']   ?? ''),
-        'grade'       => trim($_POST['grade']        ?? ''),
-        'heard_about' => trim($_POST['heard_about']  ?? ''),
-        'message'     => trim($_POST['message']      ?? ''),
-        'confirmed'   => trim($_POST['confirmed']    ?? ''),
+        'full_name'  => trim($_POST['full_name']  ?? ''),
+        'mobile'     => trim($_POST['mobile']      ?? ''),
+        'email'      => trim($_POST['email']       ?? ''),
+        'child_name' => trim($_POST['child_name']  ?? ''),
+        'grade'      => trim($_POST['grade']       ?? ''),
+        'syllabus'   => trim($_POST['syllabus']    ?? ''),
     ];
 
     // Whitelist radio values to prevent arbitrary input.
-    if (!in_array($data['profession'],  $allowed_professions, true)) { $data['profession']  = ''; }
-    if (!in_array($data['grade'],       $allowed_ages,        true)) { $data['grade']       = ''; }
-    if (!in_array($data['heard_about'], $allowed_heard,       true)) { $data['heard_about'] = ''; }
-    if (!in_array($data['message'],     ['Yes', 'No'],        true)) { $data['message']     = ''; }
+    if (!in_array($data['grade'],    $allowed_grades,   true)) { $data['grade']    = ''; }
+    if (!in_array($data['syllabus'], $allowed_syllabus, true)) { $data['syllabus'] = ''; }
 
     if ($data['full_name'] === '' || $data['mobile'] === '') {
         flash('reg_error', 'Full name and WhatsApp number are required.');
@@ -49,24 +40,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('reg_error', 'Please enter a valid email address.');
         $_SESSION['reg_old'] = $data;
         redirect(base_url() . 'register.php#register-form');
-    } elseif ($data['profession'] === '') {
-        flash('reg_error', 'Please select what best describes you.');
+    } elseif ($data['child_name'] === '') {
+        flash('reg_error', 'Please enter your child\'s name.');
         $_SESSION['reg_old'] = $data;
         redirect(base_url() . 'register.php#register-form');
-    } elseif ($data['confirmed'] !== 'yes') {
-        flash('reg_error', 'Please confirm that the information provided is correct.');
+    } elseif ($data['grade'] === '') {
+        flash('reg_error', 'Please select your child\'s current grade.');
+        $_SESSION['reg_old'] = $data;
+        redirect(base_url() . 'register.php#register-form');
+    } elseif ($data['syllabus'] === '') {
+        flash('reg_error', 'Please select the syllabus / board your child follows.');
         $_SESSION['reg_old'] = $data;
         redirect(base_url() . 'register.php#register-form');
     } else {
         db()->prepare(
             'INSERT INTO registrations
-             (tenant_id, full_name, mobile, email, profession, grade, heard_about, message)
-             VALUES (?,?,?,?,?,?,?,?)'
+             (tenant_id, full_name, mobile, email, child_name, grade, syllabus)
+             VALUES (?,?,?,?,?,?,?)'
         )->execute([
             $tid,
             $data['full_name'], $data['mobile'], $data['email'],
-            $data['profession'] ?: null, $data['grade']       ?: null,
-            $data['heard_about'] ?: null, $data['message']    ?: null,
+            $data['child_name'], $data['grade'], $data['syllabus'],
         ]);
 
         // Registration saved — go to payment page.
@@ -75,14 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $page_title       = 'Register | ' . setting('site_name');
-$page_description = '0–8 Years Parenting & Education Webinar registration with ' . setting('site_name') . '.';
+$page_description = 'Plan Your Child\'s Future Before 10th! — Webinar registration with ' . setting('site_name') . '.';
 include __DIR__ . '/includes/header.php';
 ?>
 <section class="py-5">
   <div class="container">
     <div class="text-center mb-4">
       <p class="text-uppercase fw-semibold brand-text small mb-1 ls-wide">Webinar Registration</p>
-      <h1 class="section-title">0–8 Years Parenting &amp;<br>Education Webinar</h1>
+      <h1 class="section-title">Plan Your Child's Future<br>Before 10th!</h1>
       <p class="text-muted">Fill in your details below and proceed to pay securely.</p>
     </div>
     <div class="row justify-content-center">

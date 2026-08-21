@@ -1,5 +1,5 @@
 <?php
-/** Registration form — 0–8 Years Parenting & Education Webinar */
+/** Registration form — Plan Your Child's Future Before 10th! */
 require_once __DIR__ . '/../config/functions.php';
 
 $ok  = flash('reg_success');
@@ -7,31 +7,17 @@ $err = flash('reg_error');
 $old = $_SESSION['reg_old'] ?? [];
 unset($_SESSION['reg_old']);
 
-$describes_options = [
-    'Parent of a child aged 0–8 years',
-    'Expecting Parent',
-    'Primary School Teacher',
-    'Parent & Teacher',
-    'Other',
+$grade_options = [
+    'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5',
+    'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9', 'Grade 10',
 ];
 
-$child_age_options = [
-    'Expecting',
-    '0–1 year',
-    '2–3 years',
-    '4–5 years',
-    '6–8 years',
-    'More than one child in the 0–8 age group',
-    'Not Applicable – Teacher',
-];
-
-$heard_options = [
-    'Instagram',
-    'Facebook',
-    'WhatsApp',
-    'YouTube',
-    'Friend / Family',
-    'School / Teacher',
+$syllabus_options = [
+    'CBSE',
+    'ICSE',
+    'State Board',
+    'IB',
+    'Cambridge / IGCSE',
     'Other',
 ];
 ?>
@@ -47,11 +33,11 @@ $heard_options = [
         novalidate class="needs-validation">
     <?= csrf_field() ?>
 
-    <!-- ── Registration Details ── -->
-    <h5 class="form-section-heading">Registration Details</h5>
+    <!-- ── Parent Details ── -->
+    <h5 class="form-section-heading">Parent Details</h5>
 
     <div class="mb-3">
-      <label class="form-label">1. Full Name <span class="text-danger">*</span></label>
+      <label class="form-label">1. Parent's Full Name <span class="text-danger">*</span></label>
       <input type="text" name="full_name" class="form-control" required maxlength="150"
              placeholder="Enter your full name"
              value="<?= e($old['full_name'] ?? '') ?>">
@@ -59,7 +45,7 @@ $heard_options = [
     </div>
 
     <div class="mb-3">
-      <label class="form-label">2. Email ID <span class="text-danger">*</span></label>
+      <label class="form-label">2. Email Address <span class="text-danger">*</span></label>
       <input type="email" name="email" class="form-control" required maxlength="190"
              placeholder="Enter your email address"
              value="<?= e($old['email'] ?? '') ?>">
@@ -74,34 +60,26 @@ $heard_options = [
       <div class="invalid-feedback">Please enter a valid WhatsApp number.</div>
     </div>
 
-    <!-- ── About You ── -->
-    <h5 class="form-section-heading">About You</h5>
+    <!-- ── Child's Details ── -->
+    <h5 class="form-section-heading">Child's Details</h5>
 
-    <div class="mb-4">
-      <label class="form-label">4. Which best describes you? <span class="text-danger">*</span></label>
-      <?php foreach ($describes_options as $opt): ?>
-        <div class="form-check">
-          <input class="form-check-input" type="radio" name="profession"
-                 id="desc_<?= e(preg_replace('/\W+/', '_', $opt)) ?>"
-                 value="<?= e($opt) ?>" required
-                 <?= (($old['profession'] ?? '') === $opt) ? 'checked' : '' ?>>
-          <label class="form-check-label" for="desc_<?= e(preg_replace('/\W+/', '_', $opt)) ?>">
-            <?= e($opt) ?>
-          </label>
-        </div>
-      <?php endforeach; ?>
-      <div class="invalid-feedback d-block" id="desc-error" style="display:none!important"></div>
+    <div class="mb-3">
+      <label class="form-label">4. Child's Name <span class="text-danger">*</span></label>
+      <input type="text" name="child_name" class="form-control" required maxlength="150"
+             placeholder="Enter your child's name"
+             value="<?= e($old['child_name'] ?? '') ?>">
+      <div class="invalid-feedback">Please enter your child's name.</div>
     </div>
 
     <div class="mb-4">
-      <label class="form-label">5. If you are a parent, what is your child's age?</label>
-      <?php foreach ($child_age_options as $opt): ?>
+      <label class="form-label">5. Child's Current Grade / Standard <span class="text-danger">*</span></label>
+      <?php foreach ($grade_options as $opt): ?>
         <div class="form-check">
           <input class="form-check-input" type="radio" name="grade"
-                 id="age_<?= e(preg_replace('/\W+/', '_', $opt)) ?>"
-                 value="<?= e($opt) ?>"
+                 id="grade_<?= e(preg_replace('/\W+/', '_', $opt)) ?>"
+                 value="<?= e($opt) ?>" required
                  <?= (($old['grade'] ?? '') === $opt) ? 'checked' : '' ?>>
-          <label class="form-check-label" for="age_<?= e(preg_replace('/\W+/', '_', $opt)) ?>">
+          <label class="form-check-label" for="grade_<?= e(preg_replace('/\W+/', '_', $opt)) ?>">
             <?= e($opt) ?>
           </label>
         </div>
@@ -109,54 +87,18 @@ $heard_options = [
     </div>
 
     <div class="mb-4">
-      <label class="form-label">6. How did you hear about this webinar?</label>
-      <?php foreach ($heard_options as $opt): ?>
+      <label class="form-label">6. Which syllabus / board does your child follow? <span class="text-danger">*</span></label>
+      <?php foreach ($syllabus_options as $opt): ?>
         <div class="form-check">
-          <input class="form-check-input" type="radio" name="heard_about"
-                 id="heard_<?= e(preg_replace('/\W+/', '_', $opt)) ?>"
-                 value="<?= e($opt) ?>"
-                 <?= (($old['heard_about'] ?? '') === $opt) ? 'checked' : '' ?>>
-          <label class="form-check-label" for="heard_<?= e(preg_replace('/\W+/', '_', $opt)) ?>">
+          <input class="form-check-input" type="radio" name="syllabus"
+                 id="syl_<?= e(preg_replace('/\W+/', '_', $opt)) ?>"
+                 value="<?= e($opt) ?>" required
+                 <?= (($old['syllabus'] ?? '') === $opt) ? 'checked' : '' ?>>
+          <label class="form-check-label" for="syl_<?= e(preg_replace('/\W+/', '_', $opt)) ?>">
             <?= e($opt) ?>
           </label>
         </div>
       <?php endforeach; ?>
-    </div>
-
-    <div class="mb-4">
-      <label class="form-label">
-        7. Would you like to receive information about future parenting, child development
-        and career guidance sessions?
-      </label>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="message" id="future_yes"
-               value="Yes" <?= (($old['message'] ?? '') === 'Yes') ? 'checked' : '' ?>>
-        <label class="form-check-label" for="future_yes">Yes</label>
-      </div>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="message" id="future_no"
-               value="No" <?= (($old['message'] ?? '') === 'No') ? 'checked' : '' ?>>
-        <label class="form-check-label" for="future_no">No</label>
-      </div>
-    </div>
-
-    <!-- ── Confirmation ── -->
-    <h5 class="form-section-heading">Confirmation</h5>
-
-    <div class="mb-4">
-      <label class="form-label">
-        8. I confirm that the information provided above is correct.
-        <span class="text-danger">*</span>
-      </label>
-      <div class="form-check">
-        <input class="form-check-input" type="radio" name="confirmed" id="confirm_yes"
-               value="yes" required
-               <?= (($old['confirmed'] ?? '') === 'yes') ? 'checked' : '' ?>>
-        <label class="form-check-label fw-semibold" for="confirm_yes">
-          ✓ Yes, I confirm
-        </label>
-        <div class="invalid-feedback">Please confirm your details before submitting.</div>
-      </div>
     </div>
 
     <button type="submit" class="btn btn-lg brand-btn w-100">

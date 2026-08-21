@@ -7,7 +7,7 @@ require_once __DIR__ . '/config/functions.php';
 start_session();
 
 $page_title       = 'Complete Payment | ' . setting('site_name');
-$page_description = 'Securely pay your course fees with ' . setting('site_name') . '.';
+$page_description = 'Plan Your Child\'s Future Before 10th! — Securely pay your course fees with ' . setting('site_name') . '.';
 include __DIR__ . '/includes/header.php';
 ?>
 <section class="py-5">
