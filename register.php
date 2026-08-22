@@ -77,6 +77,13 @@ include __DIR__ . '/includes/header.php';
     <div class="text-center mb-4">
       <p class="text-uppercase fw-semibold brand-text small mb-1 ls-wide">Webinar Registration</p>
       <h1 class="section-title">Plan Your Child's Future<br>Before 10th!</h1>
+      <div class="d-inline-flex flex-column align-items-start gap-2 bg-white border rounded-3 px-4 py-3 mb-3 shadow-sm text-start" style="font-size:.97rem;">
+        <div><span class="me-2">📅</span><strong>Date:</strong> 26 August 2026</div>
+        <div><span class="me-2">⏰</span><strong>Time:</strong> 6:00 PM – 7:30 PM</div>
+        <div><span class="me-2">🌐</span><strong>Mode:</strong> Online – Tamil</div>
+        <div><span class="me-2">💰</span><strong>Registration Fee:</strong> ₹299/-</div>
+        <div><span class="me-2">📞</span><strong>Contact:</strong> <a href="tel:+919345606993" class="text-decoration-none brand-text">+91 9345606993</a></div>
+      </div>
       <p class="text-muted">Fill in your details below and proceed to pay securely.</p>
     </div>
     <div class="row justify-content-center">
